@@ -1127,6 +1127,7 @@ Respond ONLY with valid JSON in this exact format:
       console.log('Text generation response:', textData);
 
       if (!textData.success) {
+        console.error('Text generation not successful:', textData);
         throw new Error('Text generation was not successful');
       }
 
@@ -1154,6 +1155,10 @@ Respond ONLY with valid JSON in this exact format:
 
       const imageData = await imageResponse.json();
       console.log('Image generation response:', imageData);
+
+      if (!imageData.success) {
+        console.error('Image generation failed:', imageData);
+      }
 
       if (imageData.success && imageData.imageUrl) {
         // Set the image
