@@ -1002,5 +1002,120 @@
     });
   });
   
+  // AI Generation functionality
+  const $aiPrompt = q('aiPrompt');
+  const $generateAI = q('generateAI');
+  const $aiStatus = q('aiStatus');
+
+  function showAIStatus(message, type = 'loading') {
+    $aiStatus.textContent = message;
+    $aiStatus.className = `ai-status ${type}`;
+    $aiStatus.style.display = 'block';
+  }
+
+  function hideAIStatus() {
+    $aiStatus.style.display = 'none';
+  }
+
+  async function generateWithAI() {
+    const prompt = $aiPrompt.value.trim();
+    if (!prompt) {
+      showAIStatus('Please enter a description for your layout', 'error');
+      setTimeout(hideAIStatus, 3000);
+      return;
+    }
+
+    $generateAI.disabled = true;
+    showAIStatus('Step 1: Generating text content with Deepseek...', 'loading');
+
+    try {
+      // Step 1: Generate text content
+      const textResponse = await fetch('/api/generate-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!textResponse.ok) {
+        throw new Error(`Text generation failed: ${textResponse.status}`);
+      }
+
+      const textData = await textResponse.json();
+      console.log('Text generation response:', textData);
+
+      if (!textData.success) {
+        throw new Error('Text generation was not successful');
+      }
+
+      // Update form fields with generated text
+      $header.value = textData.result.header;
+      $sub.value = textData.result.subheader;
+      if (textData.result.tag) {
+        $tagText.value = textData.result.tag;
+      }
+
+      showAIStatus('Step 2: Generating image with Recraft...', 'loading');
+
+      // Step 2: Generate image
+      const imageResponse = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ imagePrompt: textData.result.imagePrompt })
+      });
+
+      if (!imageResponse.ok) {
+        throw new Error(`Image generation failed: ${imageResponse.status}`);
+      }
+
+      const imageData = await imageResponse.json();
+      console.log('Image generation response:', imageData);
+
+      if (imageData.success && imageData.imageUrl) {
+        // Convert image URL to data URL and update the layout
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          imageHref = canvas.toDataURL();
+          
+          showAIStatus('✓ Layout generated successfully!', 'success');
+          setTimeout(hideAIStatus, 5000);
+          
+          // Trigger layout update
+          paint();
+        };
+        img.onerror = function() {
+          showAIStatus('Image loaded but using direct URL', 'success');
+          imageHref = imageData.imageUrl;
+          paint();
+          setTimeout(hideAIStatus, 5000);
+        };
+        img.src = imageData.imageUrl;
+      } else {
+        // Text generation worked, image failed
+        showAIStatus('✓ Text generated! Image generation failed, but layout updated.', 'success');
+        paint();
+        setTimeout(hideAIStatus, 5000);
+      }
+
+    } catch (error) {
+      console.error('AI generation error:', error);
+      showAIStatus(`Error: ${error.message}`, 'error');
+      setTimeout(hideAIStatus, 5000);
+    } finally {
+      $generateAI.disabled = false;
+    }
+  }
+
+  $generateAI.addEventListener('click', generateWithAI);
+
   paint();
 })();

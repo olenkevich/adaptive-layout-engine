@@ -1,19 +1,10 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+  "functions": {
+    "api/generate-text.js": {
+      "runtime": "nodejs18.x"
     },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+    "api/generate-image.js": {
+      "runtime": "nodejs18.x"
     }
-  ]
+  }
 }
