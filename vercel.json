@@ -1,11 +1,3 @@
 {
-  "version": 2,
-  "functions": {
-    "api/generate-text.js": {
-      "runtime": "@vercel/node@20.x"
-    },
-    "api/generate-image.js": {
-      "runtime": "@vercel/node@20.x"
-    }
-  }
+  "version": 2
 }
