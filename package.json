@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Professional adaptive layout engine with smart font scaling, grid layouts, and SVG export",
   "main": "index.html",
-  "type": "module",
   "scripts": {
     "dev": "python3 -m http.server 8000",
     "build": "echo 'Static site - ready for deployment'",
