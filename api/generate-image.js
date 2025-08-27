@@ -12,6 +12,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).json({});
@@ -29,13 +30,48 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Image prompt is required' });
     }
 
-    // For now, return demo fallback image
-    const randomImage = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+    // Check if Recraft API key is configured
+    if (!process.env.IMAGE_GENERATION_API_KEY) {
+      const randomImage = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+      return res.status(200).json({
+        success: true,
+        demo: true,
+        imageUrl: randomImage,
+        message: 'Demo mode: Configure Recraft API key for AI image generation'
+      });
+    }
+
+    // Generate image using Recraft API
+    const response = await fetch('https://external.api.recraft.ai/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.IMAGE_GENERATION_API_KEY}`
+      },
+      body: JSON.stringify({
+        prompt: `Professional, high-quality business image: ${imagePrompt}. Style: clean, modern, suitable for business/marketing layouts. High contrast, visually striking, suitable for web use. Professional photography style, bright even lighting.`,
+        style: 'realistic_image',
+        size: '1365x1024', // Good aspect ratio for layout designs
+        response_format: 'url'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Recraft API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      throw new Error('No image generated');
+    }
+
+    const imageUrl = data.data[0].url;
+
     return res.status(200).json({
       success: true,
-      demo: true,
-      imageUrl: randomImage,
-      message: 'Demo mode: Configure IMAGE_GENERATION_API_KEY for AI image generation'
+      imageUrl: imageUrl,
+      prompt: imagePrompt
     });
 
   } catch (error) {
