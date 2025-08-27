@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Adaptive Layout Engine - Professional Design Tool</title>
+  <meta name="description" content="Create professional layouts with smart font scaling, grid systems, and SVG export. Perfect for designers, marketers, and content creators." />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://adaptive-layout-engine.vercel.app/" />
+  <meta property="og:title" content="Adaptive Layout Engine - Professional Design Tool" />
+  <meta property="og:description" content="Create professional layouts with smart font scaling, grid systems, and SVG export." />
+  <meta property="og:image" content="https://adaptive-layout-engine.vercel.app/preview.jpg" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://adaptive-layout-engine.vercel.app/" />
+  <meta property="twitter:title" content="Adaptive Layout Engine - Professional Design Tool" />
+  <meta property="twitter:description" content="Create professional layouts with smart font scaling, grid systems, and SVG export." />
+  <meta property="twitter:image" content="https://adaptive-layout-engine.vercel.app/preview.jpg" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  
+  <!-- Performance -->
+  <link rel="preload" href="styles/main.css" as="style" />
+  <link rel="preload" href="js/app.js" as="script" />
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles/main.css" />
+  
+  <!-- Theme -->
+  <meta name="theme-color" content="#1a1a1a" />
+  <meta name="color-scheme" content="light" />
+</head>
+<body>
+  <aside>
+    <!-- Profile Section -->
+    <div class="profile-section">
+      <div class="profile-info">
+        <div class="profile-avatar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="profile-details">
+          <div class="profile-name">Demo User</div>
+          <div class="profile-email">demo@example.com</div>
+        </div>
+      </div>
+      <div class="profile-menu-trigger" id="profileMenuTrigger">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"></circle>
+          <circle cx="12" cy="5" r="1"></circle>
+          <circle cx="12" cy="19" r="1"></circle>
+        </svg>
+      </div>
+      
+      <!-- Context Menu -->
+      <div class="profile-menu" id="profileMenu">
+        <div class="profile-menu-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Profile Settings
+        </div>
+        <div class="profile-menu-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="m12 1 0 6m0 6 0 6m11-5-6 0m-6 0-6 0"></path>
+          </svg>
+          Preferences
+        </div>
+        <div class="profile-menu-divider"></div>
+        <div class="profile-menu-item profile-menu-item-danger">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16,17 21,12 16,7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Sign Out
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Group -->
+    <div class="group">
+      <h4>Content</h4>
+      <div class="field">
+        <label>Header</label>
+        <textarea id="header" rows="2">Design that breathes — adaptive across sizes</textarea>
+      </div>
+      <div class="field">
+        <label>Subheader</label>
+        <textarea id="subheader" rows="3">This is the original V6 behavior you liked (paddings, font search, image layout, logo S/M/L, smart preview). The ONLY change: words never split mid-token; the engine just shrinks to fit.</textarea>
+      </div>
+    </div>
+
+    <!-- Size Group -->
+    <div class="group">
+      <h4>Size</h4>
+      <div class="field">
+        <label>Size preset</label>
+        <select id="sizePreset">
+          <option value="16:9-hd">16:9 HD (1920×1080)</option>
+          <option value="16:9-4k">16:9 4K (3840×2160)</option>
+          <option value="4:3">4:3 (1024×768)</option>
+          <option value="1:1">Square (1080×1080)</option>
+          <option value="9:16">Story (1080×1920)</option>
+          <option value="a4-portrait">A4 Portrait (2480×3508)</option>
+          <option value="a4-landscape">A4 Landscape (3508×2480)</option>
+          <option value="letter-portrait">Letter Portrait (2550×3300)</option>
+          <option value="letter-landscape">Letter Landscape (3300×2550)</option>
+          <option value="custom" selected>Custom</option>
+        </select>
+      </div>
+      
+      <div id="customSizeInputs" class="row">
+        <div class="field">
+          <label>Width</label>
+          <input id="w" type="number" value="1200" min="320" step="10"/>
+        </div>
+        <div class="field">
+          <label>Height</label>
+          <input id="h" type="number" value="675" min="320" step="10"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Group -->
+    <div class="group">
+      <h4>Image</h4>
+      <div class="field">
+        <label>Upload</label>
+        <input id="imgFile" type="file" accept="image/*"/>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Pattern</label>
+          <select id="pattern">
+            <option value="auto" selected>Auto</option>
+            <option value="top">Top band</option>
+            <option value="side">Side block</option>
+            <option value="none">No image</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Round corners</label>
+          <input id="imageRounded" type="checkbox"/>
+        </div>
+      </div>
+      <div class="field">
+        <button id="clearImg" class="clear-btn" style="display: none;">Clear</button>
+      </div>
+    </div>
+
+    <!-- Logo Group -->
+    <div class="group">
+      <h4>Logo</h4>
+      <div class="field">
+        <label>Upload</label>
+        <input id="logoFile" type="file" accept="image/*"/>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Position</label>
+          <select id="logoPos">
+            <option value="top" selected>Above header</option>
+            <option value="bottom">Below body</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Size</label>
+          <select id="logoSize">
+            <option value="s">Small</option>
+            <option value="m" selected>Medium</option>
+            <option value="l">Large</option>
+          </select>
+        </div>
+        <div class="field">
+          <button id="clearLogo" class="clear-btn" style="display: none;">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tag Group -->
+    <div class="group">
+      <h4>Tag</h4>
+      <div class="field">
+        <label>Text</label>
+        <input id="tagText" type="text" placeholder="Enter tag text"/>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Position</label>
+          <select id="tagPos">
+            <option value="above" selected>Above content</option>
+            <option value="below">Below content</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Size</label>
+          <select id="tagSize">
+            <option value="s">Small</option>
+            <option value="m" selected>Medium</option>
+            <option value="l">Large</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Text color</label>
+          <div class="color-picker">
+            <input id="tagTextColor" type="color" value="#ffffff"/>
+            <input id="tagTextHex" type="text" value="#ffffff"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Shape color</label>
+          <div class="color-picker">
+            <input id="tagShapeColor" type="color" value="#111111"/>
+            <input id="tagShapeHex" type="text" value="#111111"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colors Group -->
+    <div class="group">
+      <h4>Colors</h4>
+      <div class="row">
+        <div class="field">
+          <label>Background</label>
+          <div class="color-picker">
+            <input id="bgColor" type="color" value="#ffffff"/>
+            <input id="bgHex" type="text" value="#ffffff"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Text</label>
+          <div class="color-picker">
+            <input id="textColor" type="color" value="#111111"/>
+            <input id="textHex" type="text" value="#111111"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layout Mode Group -->
+    <div class="group">
+      <h4>Layout Mode</h4>
+      <div class="row">
+        <div class="field">
+          <button id="manualMode" class="mode-btn active">Manual</button>
+        </div>
+        <div class="field">
+          <button id="randomMode" class="mode-btn">Random</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Appearance Group -->
+    <div class="group">
+      <h4>Appearance</h4>
+      <div class="row">
+        <div class="field">
+          <label>Header weight</label>
+          <select id="hw">
+            <option value="300">Light (300)</option>
+            <option value="400">Regular (400)</option>
+            <option value="500">Medium (500)</option>
+            <option value="600">Semibold (600)</option>
+            <option value="700">Bold (700)</option>
+            <option value="800" selected>Extra Bold (800)</option>
+            <option value="900">Black (900)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sub weight</label>
+          <select id="sw">
+            <option value="300">Light (300)</option>
+            <option value="400" selected>Regular (400)</option>
+            <option value="500">Medium (500)</option>
+            <option value="600">Semibold (600)</option>
+            <option value="700">Bold (700)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Font family</label>
+        <select id="ff" size="1">
+          <option value="Inter, system-ui, sans-serif" selected>Inter</option>
+          <option value="Poppins, sans-serif">Poppins</option>
+          <option value="Manrope, sans-serif">Manrope</option>
+          <option value="Plus Jakarta Sans, sans-serif">Plus Jakarta Sans</option>
+          <option value="Space Grotesk, sans-serif">Space Grotesk</option>
+          <option value="DM Sans, sans-serif">DM Sans</option>
+          <option value="Outfit, sans-serif">Outfit</option>
+          <option value="Satoshi, sans-serif">Satoshi</option>
+          <option value="General Sans, sans-serif">General Sans</option>
+          <option value="Cabinet Grotesk, sans-serif">Cabinet Grotesk</option>
+          <option value="Clash Display, sans-serif">Clash Display</option>
+          <option value="Familjen Grotesk, sans-serif">Familjen Grotesk</option>
+          <option value="Sora, sans-serif">Sora</option>
+          <option value="Cal Sans, sans-serif">Cal Sans</option>
+          <option value="Instrument Sans, sans-serif">Instrument Sans</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Padding</label>
+        <select id="paddingSize">
+          <option value="auto" selected>Auto</option>
+          <option value="s">Small</option>
+          <option value="m">Medium</option>
+          <option value="l">Large</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="err"></div>
+    
+    <p class="help">Real-size preview, scales to fit viewport</p>
+  </aside>
+
+  <main>
+    <div id="viewport">
+      <div id="wrap"></div>
+      <button id="downloadJpg" class="download-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+        </svg>
+        Download JPG
+      </button>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
