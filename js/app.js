@@ -1017,6 +1017,86 @@
     $aiStatus.style.display = 'none';
   }
 
+  async function generateTextWithDeepseek(prompt) {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${window.DEEPSEEK_API_KEY || ''}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional copywriter and design expert. Create compelling, concise content for layout designs.
+
+Instructions:
+- Generate a punchy header (max 8 words, inspiring and memorable)
+- Create an engaging subheader (max 25 words, descriptive and benefit-focused)  
+- Add a relevant tag if appropriate (max 2 words, or empty if not needed)
+- Also create an image generation prompt (describe the visual that would complement this content)
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "header": "Your header text here",
+  "subheader": "Your subheader text here", 
+  "tag": "TAG" or "",
+  "imagePrompt": "Detailed image description for image generation"
+}`
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.8
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Deepseek API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const responseText = data.choices[0].message.content.trim();
+    
+    try {
+      return JSON.parse(responseText);
+    } catch (parseError) {
+      throw new Error('Failed to parse AI response');
+    }
+  }
+
+  async function generateImageWithRecraft(imagePrompt) {
+    const response = await fetch('https://external.api.recraft.ai/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${window.RECRAFT_API_KEY || ''}`
+      },
+      body: JSON.stringify({
+        prompt: `Professional, high-quality business image: ${imagePrompt}. Style: clean, modern, suitable for business/marketing layouts. High contrast, visually striking, suitable for web use.`,
+        style: 'realistic_image',
+        size: '1365x1024',
+        response_format: 'url'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Recraft API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      throw new Error('No image generated');
+    }
+
+    return data.data[0].url;
+  }
+
   async function generateWithAI() {
     const prompt = $aiPrompt.value.trim();
     if (!prompt) {
@@ -1026,85 +1106,69 @@
     }
 
     $generateAI.disabled = true;
-    showAIStatus('Step 1: Generating text content with Deepseek...', 'loading');
-
+    
     try {
-      // Step 1: Generate text content
-      const textResponse = await fetch('/api/generate-text', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ prompt })
-      });
-
-      if (!textResponse.ok) {
-        throw new Error(`Text generation failed: ${textResponse.status}`);
-      }
-
-      const textData = await textResponse.json();
-      console.log('Text generation response:', textData);
-
-      if (!textData.success) {
-        throw new Error('Text generation was not successful');
-      }
+      // For now, let's test with dummy data
+      showAIStatus('Generating layout content...', 'loading');
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Use dummy data for now - we'll replace this with real API calls
+      const textResult = {
+        header: 'AI-Powered Innovation',
+        subheader: 'Transform your business with cutting-edge artificial intelligence solutions.',
+        tag: 'NEW',
+        imagePrompt: 'Modern tech office with AI interfaces and data visualizations'
+      };
 
       // Update form fields with generated text
-      $header.value = textData.result.header;
-      $sub.value = textData.result.subheader;
-      if (textData.result.tag) {
-        $tagText.value = textData.result.tag;
+      $header.value = textResult.header;
+      $sub.value = textResult.subheader;
+      if (textResult.tag) {
+        $tagText.value = textResult.tag;
       }
 
-      showAIStatus('Step 2: Generating image with Recraft...', 'loading');
-
-      // Step 2: Generate image
-      const imageResponse = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ imagePrompt: textData.result.imagePrompt })
-      });
-
-      if (!imageResponse.ok) {
-        throw new Error(`Image generation failed: ${imageResponse.status}`);
-      }
-
-      const imageData = await imageResponse.json();
-      console.log('Image generation response:', imageData);
-
-      if (imageData.success && imageData.imageUrl) {
-        // Convert image URL to data URL and update the layout
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = function() {
+      showAIStatus('Adding sample image...', 'loading');
+      
+      // Use a sample image for now
+      const sampleImages = [
+        'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=800&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&h=800&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=80'
+      ];
+      
+      const randomImage = sampleImages[Math.floor(Math.random() * sampleImages.length)];
+      
+      // Set the image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        try {
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0);
           imageHref = canvas.toDataURL();
-          
-          showAIStatus('✓ Layout generated successfully!', 'success');
-          setTimeout(hideAIStatus, 5000);
-          
-          // Trigger layout update
-          paint();
-        };
-        img.onerror = function() {
-          showAIStatus('Image loaded but using direct URL', 'success');
-          imageHref = imageData.imageUrl;
-          paint();
-          setTimeout(hideAIStatus, 5000);
-        };
-        img.src = imageData.imageUrl;
-      } else {
-        // Text generation worked, image failed
-        showAIStatus('✓ Text generated! Image generation failed, but layout updated.', 'success');
+        } catch (e) {
+          // If canvas fails, use direct URL
+          imageHref = randomImage;
+        }
+        
+        showAIStatus('✓ Layout generated successfully!', 'success');
+        setTimeout(hideAIStatus, 3000);
+        
+        // Trigger layout update
         paint();
-        setTimeout(hideAIStatus, 5000);
-      }
+      };
+      img.onerror = function() {
+        imageHref = randomImage;
+        showAIStatus('✓ Layout generated with sample image!', 'success');
+        setTimeout(hideAIStatus, 3000);
+        paint();
+      };
+      img.src = randomImage;
 
     } catch (error) {
       console.error('AI generation error:', error);
