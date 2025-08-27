@@ -1,4 +1,4 @@
-module.exports = function handler(req, res) {
+export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
   
@@ -14,4 +14,4 @@ module.exports = function handler(req, res) {
     hasTextKey: !!process.env.TEXT_GENERATION_API_KEY,
     hasImageKey: !!process.env.IMAGE_GENERATION_API_KEY
   });
-};
+}
