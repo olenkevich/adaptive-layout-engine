@@ -48,7 +48,7 @@ module.exports = async function(req, res) {
       },
       body: JSON.stringify({
         prompt: `Professional, high-quality business image: ${imagePrompt}. Style: clean, modern, suitable for business/marketing layouts. High contrast, visually striking, suitable for web use. Professional photography style, bright even lighting.`,
-        style: 'realistic_image',
+        style_id: '97dac561-3ff9-4764-9fad-392a0732a3f0',
         size: '1365x1024',
         response_format: 'url'
       })
