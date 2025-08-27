@@ -1,5 +1,11 @@
 {
   "version": 2,
-  "cleanUrls": true,
-  "trailingSlash": false
+  "functions": {
+    "api/generate-text.js": {
+      "runtime": "@vercel/node@20.x"
+    },
+    "api/generate-image.js": {
+      "runtime": "@vercel/node@20.x"
+    }
+  }
 }
