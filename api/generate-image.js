@@ -1,17 +1,3 @@
-const OpenAI = require('openai');
-
-// Initialize OpenAI client only if API key is provided
-const openai = process.env.IMAGE_GENERATION_API_KEY ? new OpenAI({
-  apiKey: process.env.IMAGE_GENERATION_API_KEY,
-}) : null;
-
-// CORS headers for browser requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
-
 // Fallback placeholder images for demo/testing
 const fallbackImages = [
   'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=600&fit=crop&q=80',
@@ -22,6 +8,10 @@ const fallbackImages = [
 ];
 
 module.exports = async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).json({});
@@ -39,37 +29,13 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Image prompt is required' });
     }
 
-    // Check if API key is configured
-    if (!openai) {
-      // Return demo fallback image
-      const randomImage = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
-      return res.status(200).json({
-        success: true,
-        demo: true,
-        imageUrl: randomImage,
-        message: 'Demo mode: Configure IMAGE_GENERATION_API_KEY for AI image generation'
-      });
-    }
-
-    // Generate image using DALL-E
-    const response = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: `Create a professional, high-quality image: ${imagePrompt}. Style: clean, modern, suitable for business/marketing layouts. High contrast, visually striking, suitable for web use.`,
-      size: '1792x1024', // Good aspect ratio for layout designs
-      quality: 'standard',
-      n: 1,
-    });
-
-    if (!response.data || response.data.length === 0) {
-      throw new Error('No image generated');
-    }
-
-    const imageUrl = response.data[0].url;
-
+    // For now, return demo fallback image
+    const randomImage = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
     return res.status(200).json({
       success: true,
-      imageUrl: imageUrl,
-      prompt: imagePrompt
+      demo: true,
+      imageUrl: randomImage,
+      message: 'Demo mode: Configure IMAGE_GENERATION_API_KEY for AI image generation'
     });
 
   } catch (error) {
