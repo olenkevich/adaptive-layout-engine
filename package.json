@@ -18,8 +18,12 @@
     "svg-export",
     "typography",
     "grid-system",
-    "web-app"
+    "web-app",
+    "ai-powered"
   ],
+  "dependencies": {
+    "openai": "^4.20.1"
+  },
   "author": "Layout Engine Team",
   "license": "MIT",
   "repository": {
@@ -31,6 +35,6 @@
     "url": "https://github.com/yourusername/adaptive-layout-engine/issues"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   }
 }
