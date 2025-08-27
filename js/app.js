@@ -1108,104 +1108,101 @@ Respond ONLY with valid JSON in this exact format:
     $generateAI.disabled = true;
     
     try {
-      // Check if we have API keys configured (you can set these in browser console)
-      const hasDeepseekKey = window.DEEPSEEK_API_KEY && window.DEEPSEEK_API_KEY.trim();
-      const hasRecraftKey = window.RECRAFT_API_KEY && window.RECRAFT_API_KEY.trim();
+      // Step 1: Generate text content using serverless function
+      showAIStatus('Step 1: Generating text content...', 'loading');
       
-      let textResult;
-      
-      if (hasDeepseekKey) {
-        showAIStatus('Step 1: Generating text with Deepseek...', 'loading');
-        try {
-          textResult = await generateTextWithDeepseek(prompt);
-        } catch (error) {
-          console.error('Deepseek API error:', error);
-          showAIStatus('Deepseek API failed, using fallback...', 'loading');
-          textResult = {
-            header: 'AI-Powered Innovation',
-            subheader: 'Transform your business with cutting-edge artificial intelligence solutions.',
-            tag: 'NEW',
-            imagePrompt: 'Modern tech office with AI interfaces and data visualizations'
-          };
-        }
-      } else {
-        showAIStatus('Using demo text (no Deepseek key)...', 'loading');
-        textResult = {
-          header: 'AI-Powered Innovation',
-          subheader: 'Transform your business with cutting-edge artificial intelligence solutions.',
-          tag: 'NEW',
-          imagePrompt: 'Modern tech office with AI interfaces and data visualizations'
-        };
+      const textResponse = await fetch('/api/generate-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!textResponse.ok) {
+        throw new Error(`Text generation failed: ${textResponse.status}`);
+      }
+
+      const textData = await textResponse.json();
+      console.log('Text generation response:', textData);
+
+      if (!textData.success) {
+        throw new Error('Text generation was not successful');
       }
 
       // Update form fields with generated text
-      $header.value = textResult.header;
-      $sub.value = textResult.subheader;
-      if (textResult.tag) {
-        $tagText.value = textResult.tag;
+      $header.value = textData.result.header;
+      $sub.value = textData.result.subheader;
+      if (textData.result.tag) {
+        $tagText.value = textData.result.tag;
       }
 
-      let imageUrl;
+      // Step 2: Generate image using serverless function
+      showAIStatus('Step 2: Generating image...', 'loading');
       
-      if (hasRecraftKey) {
-        showAIStatus('Step 2: Generating image with Recraft...', 'loading');
-        try {
-          imageUrl = await generateImageWithRecraft(textResult.imagePrompt);
-        } catch (error) {
-          console.error('Recraft API error:', error);
-          showAIStatus('Recraft API failed, using fallback image...', 'loading');
-          const sampleImages = [
-            'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=800&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&h=800&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=80'
-          ];
-          imageUrl = sampleImages[Math.floor(Math.random() * sampleImages.length)];
-        }
-      } else {
-        showAIStatus('Using demo image (no Recraft key)...', 'loading');
-        const sampleImages = [
-          'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=800&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&h=800&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=80'
-        ];
-        imageUrl = sampleImages[Math.floor(Math.random() * sampleImages.length)];
+      const imageResponse = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ imagePrompt: textData.result.imagePrompt })
+      });
+
+      if (!imageResponse.ok) {
+        throw new Error(`Image generation failed: ${imageResponse.status}`);
       }
-      
-      // Set the image
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = function() {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          imageHref = canvas.toDataURL();
-        } catch (e) {
-          // If canvas fails, use direct URL
-          imageHref = imageUrl;
-        }
-        
-        const statusMsg = hasDeepseekKey && hasRecraftKey ? 
-          '✓ Layout generated with AI!' : 
-          hasDeepseekKey ? '✓ Layout generated with AI text!' : 
-          hasRecraftKey ? '✓ Layout generated with AI image!' :
-          '✓ Layout generated with demo content!';
-        
-        showAIStatus(statusMsg, 'success');
-        setTimeout(hideAIStatus, 3000);
-        
-        // Trigger layout update
+
+      const imageData = await imageResponse.json();
+      console.log('Image generation response:', imageData);
+
+      if (imageData.success && imageData.imageUrl) {
+        // Set the image
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            imageHref = canvas.toDataURL();
+          } catch (e) {
+            // If canvas fails, use direct URL
+            imageHref = imageData.imageUrl;
+          }
+          
+          // Determine success message based on what was actually generated
+          let statusMsg = '✓ Layout generated!';
+          if (textData.demo && imageData.demo) {
+            statusMsg = '✓ Demo layout generated!';
+          } else if (textData.demo) {
+            statusMsg = '✓ Layout with AI image generated!';
+          } else if (imageData.demo || imageData.fallback) {
+            statusMsg = '✓ Layout with AI text generated!';
+          } else {
+            statusMsg = '✓ Full AI layout generated!';
+          }
+          
+          showAIStatus(statusMsg, 'success');
+          setTimeout(hideAIStatus, 3000);
+          
+          // Trigger layout update
+          paint();
+        };
+        img.onerror = function() {
+          imageHref = imageData.imageUrl;
+          showAIStatus('✓ Layout generated!', 'success');
+          setTimeout(hideAIStatus, 3000);
+          paint();
+        };
+        img.src = imageData.imageUrl;
+      } else {
+        // Text generation worked, image failed
+        showAIStatus('✓ Text generated! Image failed, layout updated.', 'success');
         paint();
-      };
-      img.onerror = function() {
-        imageHref = imageUrl;
-        showAIStatus('✓ Layout generated!', 'success');
         setTimeout(hideAIStatus, 3000);
-        paint();
-      };
-      img.src = imageUrl;
+      }
 
     } catch (error) {
       console.error('AI generation error:', error);
