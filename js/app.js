@@ -1108,19 +1108,35 @@ Respond ONLY with valid JSON in this exact format:
     $generateAI.disabled = true;
     
     try {
-      // For now, let's test with dummy data
-      showAIStatus('Generating layout content...', 'loading');
+      // Check if we have API keys configured (you can set these in browser console)
+      const hasDeepseekKey = window.DEEPSEEK_API_KEY && window.DEEPSEEK_API_KEY.trim();
+      const hasRecraftKey = window.RECRAFT_API_KEY && window.RECRAFT_API_KEY.trim();
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let textResult;
       
-      // Use dummy data for now - we'll replace this with real API calls
-      const textResult = {
-        header: 'AI-Powered Innovation',
-        subheader: 'Transform your business with cutting-edge artificial intelligence solutions.',
-        tag: 'NEW',
-        imagePrompt: 'Modern tech office with AI interfaces and data visualizations'
-      };
+      if (hasDeepseekKey) {
+        showAIStatus('Step 1: Generating text with Deepseek...', 'loading');
+        try {
+          textResult = await generateTextWithDeepseek(prompt);
+        } catch (error) {
+          console.error('Deepseek API error:', error);
+          showAIStatus('Deepseek API failed, using fallback...', 'loading');
+          textResult = {
+            header: 'AI-Powered Innovation',
+            subheader: 'Transform your business with cutting-edge artificial intelligence solutions.',
+            tag: 'NEW',
+            imagePrompt: 'Modern tech office with AI interfaces and data visualizations'
+          };
+        }
+      } else {
+        showAIStatus('Using demo text (no Deepseek key)...', 'loading');
+        textResult = {
+          header: 'AI-Powered Innovation',
+          subheader: 'Transform your business with cutting-edge artificial intelligence solutions.',
+          tag: 'NEW',
+          imagePrompt: 'Modern tech office with AI interfaces and data visualizations'
+        };
+      }
 
       // Update form fields with generated text
       $header.value = textResult.header;
@@ -1129,16 +1145,31 @@ Respond ONLY with valid JSON in this exact format:
         $tagText.value = textResult.tag;
       }
 
-      showAIStatus('Adding sample image...', 'loading');
+      let imageUrl;
       
-      // Use a sample image for now
-      const sampleImages = [
-        'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=800&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&h=800&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=80'
-      ];
-      
-      const randomImage = sampleImages[Math.floor(Math.random() * sampleImages.length)];
+      if (hasRecraftKey) {
+        showAIStatus('Step 2: Generating image with Recraft...', 'loading');
+        try {
+          imageUrl = await generateImageWithRecraft(textResult.imagePrompt);
+        } catch (error) {
+          console.error('Recraft API error:', error);
+          showAIStatus('Recraft API failed, using fallback image...', 'loading');
+          const sampleImages = [
+            'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=800&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&h=800&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=80'
+          ];
+          imageUrl = sampleImages[Math.floor(Math.random() * sampleImages.length)];
+        }
+      } else {
+        showAIStatus('Using demo image (no Recraft key)...', 'loading');
+        const sampleImages = [
+          'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=800&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1558655146-d09347e92766?w=1200&h=800&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=80'
+        ];
+        imageUrl = sampleImages[Math.floor(Math.random() * sampleImages.length)];
+      }
       
       // Set the image
       const img = new Image();
@@ -1153,22 +1184,28 @@ Respond ONLY with valid JSON in this exact format:
           imageHref = canvas.toDataURL();
         } catch (e) {
           // If canvas fails, use direct URL
-          imageHref = randomImage;
+          imageHref = imageUrl;
         }
         
-        showAIStatus('✓ Layout generated successfully!', 'success');
+        const statusMsg = hasDeepseekKey && hasRecraftKey ? 
+          '✓ Layout generated with AI!' : 
+          hasDeepseekKey ? '✓ Layout generated with AI text!' : 
+          hasRecraftKey ? '✓ Layout generated with AI image!' :
+          '✓ Layout generated with demo content!';
+        
+        showAIStatus(statusMsg, 'success');
         setTimeout(hideAIStatus, 3000);
         
         // Trigger layout update
         paint();
       };
       img.onerror = function() {
-        imageHref = randomImage;
-        showAIStatus('✓ Layout generated with sample image!', 'success');
+        imageHref = imageUrl;
+        showAIStatus('✓ Layout generated!', 'success');
         setTimeout(hideAIStatus, 3000);
         paint();
       };
-      img.src = randomImage;
+      img.src = imageUrl;
 
     } catch (error) {
       console.error('AI generation error:', error);
