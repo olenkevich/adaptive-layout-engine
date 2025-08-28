@@ -869,7 +869,7 @@
       $wrap.innerHTML = svg;
       $wrap.style.width = width + 'px';
       $wrap.style.height = height + 'px';
-      $wrap.style.borderRadius = $imageRounded.checked ? '24px' : '6px';
+      $wrap.className = $imageRounded.checked ? 'rounded' : '';
       
       updateScale(width, height);
     }catch(e){ 

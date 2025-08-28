@@ -362,6 +362,10 @@ main {
   flex-shrink: 0;
 }
 
+#wrap.rounded {
+  border-radius: 24px !important;
+}
+
 .help { 
   color: #9ca3af; 
   font-size: 11px; 
