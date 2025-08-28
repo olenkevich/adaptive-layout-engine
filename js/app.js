@@ -95,22 +95,12 @@
     return aspect>=1.3 ? 'side' : 'top';
   }
 
-  function fitLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingSize}){
+  function fitLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV}){
     const minDim=Math.min(W,H);
     const mH=createMeasure(fontFamily, headerWeight);
     const mS=createMeasure(fontFamily, subWeight);
 
-    let padding;
-    if (paddingSize === 'auto') {
-      padding = round8(clamp(24, minDim*0.10, 120));
-    } else {
-      const paddingMap = {
-        s: Math.max(16, Math.floor(minDim * 0.06)),
-        m: Math.max(32, Math.floor(minDim * 0.10)), 
-        l: Math.max(64, Math.floor(minDim * 0.16))
-      };
-      padding = round8(paddingMap[paddingSize] || paddingMap.m);
-    }
+    const padding = paddingH || round8(clamp(24, minDim*0.10, 120));
     const ratio = LAYOUT_CONSTANTS.HEADER_TO_SUB_RATIO;
     const lhH = LAYOUT_CONSTANTS.HEADER_LINE_HEIGHT;
     const lhS = LAYOUT_CONSTANTS.SUB_LINE_HEIGHT;
@@ -316,19 +306,13 @@
     return GRID_LAYOUTS[Math.floor(Math.random() * GRID_LAYOUTS.length)];
   }
 
-  function fitRandomLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingSize}) {
+  function fitRandomLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV}) {
     const gridLayout = getRandomGridLayout();
     const minDim = Math.min(W, H);
     const mH = createMeasure(fontFamily, headerWeight);
     const mS = createMeasure(fontFamily, subWeight);
     
-    let padding;
-    if (paddingSize === 'auto') {
-      padding = round8(clamp(20, minDim * 0.06, 60));
-    } else {
-      const paddingMap = { s: Math.max(16, Math.floor(minDim * 0.04)), m: Math.max(24, Math.floor(minDim * 0.06)), l: Math.max(40, Math.floor(minDim * 0.10)) };
-      padding = round8(paddingMap[paddingSize] || paddingMap.m);
-    }
+    const padding = paddingH || round8(clamp(20, minDim * 0.06, 60));
     
     const contentWidth = W - 2 * padding;
     const contentHeight = H - 2 * padding;
@@ -470,10 +454,10 @@
   }
 
   function renderSVG(opts){
-    const {width,height,header,subheader,headerWeight,subWeight,fontFamily,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingSize} = opts;
+    const {width,height,header,subheader,headerWeight,subWeight,fontFamily,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV} = opts;
     const m = isRandomMode ? 
-      fitRandomLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingSize}) :
-      fitLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingSize});
+      fitRandomLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV}) :
+      fitLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV});
     const parts = [`<?xml version="1.0" encoding="UTF-8"?>`,
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
       `<rect width="100%" height="100%" fill="${esc(m.bgColor)}"/>`];
@@ -806,7 +790,8 @@
         tagShapeColor: $tagShapeHex.value,
         textColor: $textHex.value,
         bgColor: $bgHex.value,
-        paddingSize: 'auto'
+        paddingH: parseInt($paddingH.value||'24',10),
+        paddingV: parseInt($paddingV.value||'24',10)
       });
 
       const canvas = document.createElement('canvas');
@@ -873,7 +858,8 @@
         tagShapeColor: $tagShapeHex.value,
         textColor: $textHex.value,
         bgColor: $bgHex.value,
-        paddingSize: 'auto'
+        paddingH: parseInt($paddingH.value||'24',10),
+        paddingV: parseInt($paddingV.value||'24',10)
       });
 
       // Store current layout
@@ -914,7 +900,7 @@
   
   // Text inputs get debounced updates for typing, others get immediate
   [$header, $sub, $tagText].forEach(n => n.addEventListener('input', debouncedPaint));
-  [$w,$h,$hw,$sw,$pattern,$imageRounded,$logoPos,$logoSize,$tagPos,$tagSize,$tagTextColor,$tagTextHex,$tagShapeColor,$tagShapeHex,$paddingH,$paddingV,$bgColor,$bgHex,$textColor,$textHex,$sizePreset].forEach(n => n.addEventListener('change', paint));
+  [$w,$h,$hw,$sw,$ff,$pattern,$imageRounded,$logoPos,$logoSize,$tagPos,$tagSize,$tagTextColor,$tagTextHex,$tagShapeColor,$tagShapeHex,$paddingH,$paddingV,$bgColor,$bgHex,$textColor,$textHex,$sizePreset].forEach(n => n.addEventListener('change', paint));
   
   // Add special handling for width/height to update preset selector and validate bounds
   function validateDimensionInput(input, dimension) {
