@@ -462,7 +462,9 @@
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
       `<rect width="100%" height="100%" fill="${esc(m.bgColor)}"/>`];
     if (m.imgBox && m.imgBox.w>0 && m.imgBox.h>0 && imageHref) {
+      console.log('imageRounded value:', imageRounded, 'type:', typeof imageRounded);
       const roundedAttrs = imageRounded ? ` rx="12" ry="12"` : '';
+      console.log('roundedAttrs:', roundedAttrs);
       parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice"${roundedAttrs}/>`);
     }
     if (m.logoBox && logoHref) {
