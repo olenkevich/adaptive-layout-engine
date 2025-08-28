@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Design System - Component Library</title>
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      grid-template-columns: 1fr;
+      padding: 12px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f8f9fa;
+      font-family: 'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    }
+
+    .ds-header {
+      margin-bottom: 24px;
+    }
+
+    .ds-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.01em;
+    }
+
+    .ds-subtitle {
+      color: #6b7280;
+      font-size: 13px;
+      margin: 0;
+      font-weight: 400;
+    }
+
+    .ds-section {
+      margin-bottom: 24px;
+    }
+
+    .ds-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin: 0 0 12px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .ds-component {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #ffffff;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .ds-component-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: #6b7280;
+      margin: 0 0 6px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .ds-example {
+      margin-bottom: 10px;
+    }
+
+    .ds-states {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ds-color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .ds-color-swatch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ds-color-box {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      border: 1px solid #e8eaed;
+    }
+
+    .ds-color-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #374151;
+      text-align: center;
+      letter-spacing: -0.005em;
+    }
+
+    .ds-typography-sample {
+      margin-bottom: 10px;
+    }
+
+    .ds-typography-meta {
+      font-size: 11px;
+      font-weight: 500;
+      color: #9ca3af;
+      margin-top: 4px;
+      letter-spacing: -0.005em;
+    }
+
+    .ds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 6px;
+    }
+
+    .demo-profile {
+      width: 280px;
+    }
+
+    .demo-ai-container {
+      width: 300px;
+    }
+
+    .demo-expandable {
+      width: 280px;
+    }
+  </style>
+</head>
+<body>
+  <header class="ds-header">
+    <h1 class="ds-title">Design System</h1>
+    <p class="ds-subtitle">Component library and style guide</p>
+  </header>
+
+  <!-- Colors -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Colors</h2>
+    <div class="ds-component">
+      <h3 class="ds-component-title">Primary Colors</h3>
+      <div class="ds-color-grid">
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #1a1a1a;"></div>
+          <div class="ds-color-label">#1a1a1a<br>Text Primary</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #374151;"></div>
+          <div class="ds-color-label">#374151<br>Text Secondary</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #6b7280;"></div>
+          <div class="ds-color-label">#6b7280<br>Text Muted</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #9ca3af;"></div>
+          <div class="ds-color-label">#9ca3af<br>Text Disabled</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Background Colors</h3>
+      <div class="ds-color-grid">
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #ffffff; border: 1px solid #e8eaed;"></div>
+          <div class="ds-color-label">#ffffff<br>Background</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #f8f9fa;"></div>
+          <div class="ds-color-label">#f8f9fa<br>Background Alt</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #f1f3f4;"></div>
+          <div class="ds-color-label">#f1f3f4<br>Input Background</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #e8eaed;"></div>
+          <div class="ds-color-label">#e8eaed<br>Input Focus</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Accent Colors</h3>
+      <div class="ds-color-grid">
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);"></div>
+          <div class="ds-color-label">AI Gradient<br>Primary Action</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #d70015;"></div>
+          <div class="ds-color-label">#d70015<br>Error</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #10b981;"></div>
+          <div class="ds-color-label">#10b981<br>Success</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #e8eaed;"></div>
+          <div class="ds-color-label">#e8eaed<br>Border</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #ffb3ba;"></div>
+          <div class="ds-color-label">#ffb3ba<br>Error Border</div>
+        </div>
+        <div class="ds-color-swatch">
+          <div class="ds-color-box" style="background-color: #ffeaea;"></div>
+          <div class="ds-color-label">#ffeaea<br>Error Background</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Typography -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Typography</h2>
+    <div class="ds-component">
+      <h3 class="ds-component-title">Font Families (Layout Generation)</h3>
+      <div class="ds-typography-sample" style="font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 400; color: #1a1a1a; letter-spacing: -0.01em;">
+        Inter - The quick brown fox jumps over the lazy dog
+        <div class="ds-typography-meta">Default layout font</div>
+      </div>
+      <div class="ds-typography-sample" style="font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 400; color: #1a1a1a; letter-spacing: -0.01em;">
+        Poppins - The quick brown fox jumps over the lazy dog
+        <div class="ds-typography-meta">Friendly option</div>
+      </div>
+      <div class="ds-typography-sample" style="font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 400; color: #1a1a1a; letter-spacing: -0.01em;">
+        Space Grotesk - The quick brown fox jumps over the lazy dog
+        <div class="ds-typography-meta">Geometric option</div>
+      </div>
+      <div class="ds-typography-sample" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 400; color: #1a1a1a; letter-spacing: -0.01em;">
+        JetBrains Mono - The quick brown fox jumps over the lazy dog
+        <div class="ds-typography-meta">Monospace option</div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">UI Font (Geist Mono)</h3>
+      <div class="ds-typography-sample" style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 400; color: #1a1a1a; letter-spacing: -0.01em;">
+        Geist Mono - Interface font for all UI elements
+        <div class="ds-typography-meta">UI system font</div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Font Sizes & Weights</h3>
+      <div class="ds-typography-sample" style="font-size: 20px; font-weight: 600; margin-bottom: 10px; color: #1a1a1a; letter-spacing: -0.01em;">
+        Section Title
+        <div class="ds-typography-meta">20px / 600</div>
+      </div>
+      <div class="ds-typography-sample" style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151; text-transform: uppercase; letter-spacing: 0.025em;">
+        Component Title
+        <div class="ds-typography-meta">14px / 600 uppercase</div>
+      </div>
+      <div class="ds-typography-sample" style="font-size: 13px; font-weight: 400; margin-bottom: 10px; color: #1a1a1a; letter-spacing: -0.01em;">
+        Body Text
+        <div class="ds-typography-meta">13px / 400</div>
+      </div>
+      <div class="ds-typography-sample" style="font-size: 11px; font-weight: 500; margin-bottom: 10px; color: #374151; letter-spacing: -0.005em;">
+        Label Text
+        <div class="ds-typography-meta">11px / 500</div>
+      </div>
+      <div class="ds-typography-sample" style="font-size: 11px; font-weight: 500; margin-bottom: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.025em;">
+        Group Header
+        <div class="ds-typography-meta">11px / 500 uppercase</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Form Elements -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Form Elements</h2>
+    
+    <div class="ds-component">
+      <h3 class="ds-component-title">Text Input</h3>
+      <div class="ds-grid">
+        <div class="field">
+          <label>Default State</label>
+          <input type="text" placeholder="Enter text..." />
+        </div>
+        <div class="field">
+          <label>With Value</label>
+          <input type="text" value="Sample text content" />
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Textarea</h3>
+      <div class="field">
+        <label>Description</label>
+        <textarea rows="3" placeholder="Enter description..."></textarea>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Select Dropdown</h3>
+      <div class="ds-grid">
+        <div class="field">
+          <label>Size preset</label>
+          <select>
+            <option>16:9 HD (1920×1080)</option>
+            <option>4:3 (1024×768)</option>
+            <option>Square (1080×1080)</option>
+            <option>Custom</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Font weight</label>
+          <select>
+            <option>Light (300)</option>
+            <option>Regular (400)</option>
+            <option>Medium (500)</option>
+            <option>Bold (700)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Color Picker</h3>
+      <div class="field">
+        <label>Background color</label>
+        <div class="color-picker">
+          <input type="color" value="#ffffff"/>
+          <input type="text" value="#ffffff"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">File Upload</h3>
+      <div class="field">
+        <div class="upload-component">
+          <button type="button" class="upload-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17,8 12,3 7,8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Upload Image
+          </button>
+        </div>
+      </div>
+      
+      <h4 style="margin: 10px 0 6px 0;">With Preview</h4>
+      <div class="field">
+        <div class="upload-component">
+          <button type="button" class="upload-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17,8 12,3 7,8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Upload Image
+          </button>
+          <div class="upload-preview show">
+            <img class="upload-preview-img" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMjAwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjFmM2Y0Ii8+CjxwYXRoIGQ9Ik0xMDAgMjBMMTIwIDQwSDE4MFY2MEgyMFY0MEg4MFoiIGZpbGw9IiNlOGVhZWQiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeD0iODgiIHk9IjI4Ij4KPHJlY3Qgd2lkdGg9IjciIGhlaWdodD0iNyIgeD0iOSIgeT0iOSIgZmlsbD0iIzZiNzI4MCIvPgo8cGF0aCBkPSJtOSAyIDMtM3YxM00yMSAxNWwtMy4wODYtMy4wODZhMiAyIDAgMCAwLTIuODI4IDBMMTMgMTQiIHN0cm9rZT0iIzZiNzI4MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cjwvc3ZnPgo=" alt="Preview" />
+            <button class="upload-preview-trash">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3,6 5,6 21,6"></polyline>
+                <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Checkbox</h3>
+      <div class="field">
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" checked style="width: auto;"/>
+          Round corners
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- Buttons -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Buttons</h2>
+    
+    <div class="ds-component">
+      <h3 class="ds-component-title">Primary Button</h3>
+      <div class="ds-states">
+        <button class="download-btn" style="width: auto; margin: 0;">Download JPG</button>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Secondary Button</h3>
+      <div class="ds-states">
+        <button style="width: auto;">Secondary Action</button>
+        <button style="width: auto;" disabled>Disabled</button>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Clear Button</h3>
+      <div class="ds-states">
+        <button class="clear-btn" style="width: auto;">Clear</button>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">AI Generation Button</h3>
+      <div class="ds-example">
+        <div class="prompt-container" style="width: 300px;">
+          <textarea rows="2" placeholder="Describe your layout"></textarea>
+          <button class="ai-generate-btn-round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <h4 style="margin: 10px 0 6px 0;">Button States</h4>
+      <div class="ds-states">
+        <button class="ai-generate-btn-round" style="position: static; margin: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
+        </button>
+        <button class="ai-generate-btn-round" disabled style="position: static; margin: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
+        </button>
+        <button class="ai-generate-btn-round loading" style="position: static; margin: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
+        </button>
+        <button class="ai-generate-btn-round success" style="position: static; margin: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+      <div style="font-size: 11px; font-weight: 500; color: #9ca3af; margin-top: 6px; letter-spacing: -0.005em;">
+        Normal • Disabled • Loading • Success
+      </div>
+    </div>
+  </section>
+
+  <!-- Layout Components -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Layout Components</h2>
+    
+    <div class="ds-component">
+      <h3 class="ds-component-title">Profile Section</h3>
+      <div class="ds-example">
+        <div class="profile-section demo-profile">
+          <div class="profile-info">
+            <div class="profile-avatar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="profile-details">
+              <div class="profile-name">Demo User</div>
+              <div class="profile-email">demo@example.com</div>
+            </div>
+          </div>
+          <div class="profile-menu-trigger">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="12" cy="5" r="1"></circle>
+              <circle cx="12" cy="19" r="1"></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Form Group</h3>
+      <div class="ds-example">
+        <div class="group" style="width: 300px;">
+          <h4>Content</h4>
+          <div class="field">
+            <label>Header</label>
+            <textarea rows="2">Design that breathes — adaptive across sizes</textarea>
+          </div>
+          <div class="field">
+            <label>Subheader</label>
+            <textarea rows="3">This is the original V6 behavior you liked</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Expandable Group</h3>
+      <div class="ds-example">
+        <div class="group expandable demo-expandable">
+          <div class="group-header" onclick="toggleGroup(this)">
+            <h4>Advanced Settings</h4>
+            <svg class="expand-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="m9 18 6-6-6-6"/>
+            </svg>
+          </div>
+          <div class="group-content">
+            <div class="subgroup">
+              <h5>Paddings</h5>
+              <div class="row">
+                <div class="field">
+                  <label>Horizontal</label>
+                  <input type="number" value="24" />
+                </div>
+                <div class="field">
+                  <label>Vertical</label>
+                  <input type="number" value="24" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Two-Column Row</h3>
+      <div class="ds-example">
+        <div class="row" style="width: 300px;">
+          <div class="field">
+            <label>Width</label>
+            <input type="number" value="1920" />
+          </div>
+          <div class="field">
+            <label>Height</label>
+            <input type="number" value="1080" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive States -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Interactive States</h2>
+    
+    <div class="ds-component">
+      <h3 class="ds-component-title">Input States</h3>
+      <div class="ds-grid">
+        <div class="field">
+          <label>Default</label>
+          <input type="text" placeholder="Default state" />
+        </div>
+        <div class="field">
+          <label>Focused</label>
+          <input type="text" value="Focused state" style="background: #e8eaed; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);" />
+        </div>
+        <div class="field">
+          <label>Error</label>
+          <input type="text" value="Invalid input" style="background: #ffebea; border: 1px solid #ffb3ba;" />
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Button Hover Effects</h3>
+      <div class="ds-states">
+        <button style="width: auto;">Normal</button>
+        <button style="width: auto; background: #e8eaed;">Hover</button>
+        <button style="width: auto; background: #dadce0;">Active</button>
+        <button style="width: auto;" disabled>Disabled</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Error Handling -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Error & Status Messages</h2>
+    
+    <div class="ds-component">
+      <h3 class="ds-component-title">Error Message</h3>
+      <div style="color: #d70015; font-size: 12px; font-weight: 500; background: #ffeaea; padding: 10px 12px; border-radius: 8px; border: 1px solid #ffb3ba; letter-spacing: -0.01em;">
+        This is an error message example
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Help Text</h3>
+      <div class="help">Real-size preview, scales to fit viewport</div>
+    </div>
+  </section>
+
+  <!-- Spacing & Layout -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Spacing System</h2>
+    
+    <div class="ds-component">
+      <h3 class="ds-component-title">Spacing Scale</h3>
+      <div style="font-family: 'Geist Mono', 'SF Mono', Monaco, monospace; font-size: 11px; font-weight: 500; color: #374151; letter-spacing: -0.005em;">
+        <div style="margin-bottom: 6px;">4px - Micro spacing</div>
+        <div style="margin-bottom: 6px;">6px - Small gaps</div>
+        <div style="margin-bottom: 6px;">8px - Standard gaps</div>
+        <div style="margin-bottom: 6px;">10px - Field margins</div>
+        <div style="margin-bottom: 6px;">12px - Group padding</div>
+        <div style="margin-bottom: 6px;">16px - Section spacing</div>
+        <div style="margin-bottom: 6px;">24px - Large spacing</div>
+        <div style="margin-bottom: 6px;">48px - Section breaks</div>
+      </div>
+    </div>
+
+    <div class="ds-component">
+      <h3 class="ds-component-title">Border Radius</h3>
+      <div class="ds-states">
+        <div style="width: 60px; height: 40px; background: #f1f3f4; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #374151;">6px</div>
+        <div style="width: 40px; height: 40px; background: #f1f3f4; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #374151;">50%</div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Toggle expandable groups
+    function toggleGroup(header) {
+      const group = header.parentElement;
+      group.classList.toggle('expanded');
+    }
+
+    // Sync color inputs
+    function syncColorInputs(colorInput, hexInput){
+      const updateFromPicker = ()=>{ hexInput.value = colorInput.value; };
+      const updateFromHex = ()=>{
+        const isValid = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hexInput.value.trim());
+        if (isValid) {
+          colorInput.value = hexInput.value.trim();
+          hexInput.style.backgroundColor = '#f1f3f4';
+        } else {
+          hexInput.style.backgroundColor = '#ffebea';
+        }
+      };
+      colorInput.addEventListener('input', updateFromPicker);
+      hexInput.addEventListener('input', updateFromHex);
+    }
+
+    // Initialize color pickers
+    document.querySelectorAll('.color-picker').forEach(picker => {
+      const colorInput = picker.querySelector('input[type="color"]');
+      const hexInput = picker.querySelector('input[type="text"]');
+      if (colorInput && hexInput) {
+        syncColorInputs(colorInput, hexInput);
+      }
+    });
+  </script>
+</body>
+</html>

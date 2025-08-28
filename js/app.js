@@ -518,13 +518,13 @@
 
   // UI
   const $w=q('w'), $h=q('h'), $header=q('header'), $sub=q('subheader'),
-        $hw=q('hw'), $sw=q('sw'), $ff=q('ff'),
+        $hw=q('headerWeight'), $sw=q('subWeight'), $ff=q('fontFamily'),
         $wrap=q('wrap'), $err=q('err'),
         $imgFile=q('imgFile'), $clearImg=q('clearImg'), $pattern=q('pattern'), $imageRounded=q('imageRounded'),
         $logoFile=q('logoFile'), $clearLogo=q('clearLogo'), $logoPos=q('logoPos'), $logoSize=q('logoSize'),
         $tagText=q('tagText'), $tagPos=q('tagPos'), $tagSize=q('tagSize'),
         $tagTextColor=q('tagTextColor'), $tagTextHex=q('tagTextHex'), $tagShapeColor=q('tagShapeColor'), $tagShapeHex=q('tagShapeHex'),
-        $paddingSize=q('paddingSize'),
+        $paddingH=q('paddingH'), $paddingV=q('paddingV'), $recraftStyleId=q('recraftStyleId'),
         $bgColor=q('bgColor'), $bgHex=q('bgHex'), $textColor=q('textColor'), $textHex=q('textHex'),
         $viewport=q('viewport'), $downloadJpg=q('downloadJpg'), $sizePreset=q('sizePreset'), $customSizeInputs=q('customSizeInputs');
 
@@ -535,6 +535,15 @@
   // Google Fonts management - Modern designer favorites
   const googleFonts = {
     'Inter': 'Inter:wght@300;400;500;600;700;800;900',
+    'Poppins': 'Poppins:wght@300;400;500;600;700;800;900',
+    'Manrope': 'Manrope:wght@300;400;500;600;700;800',
+    'Plus Jakarta Sans': 'Plus+Jakarta+Sans:wght@300;400;500;600;700;800',
+    'Space Grotesk': 'Space+Grotesk:wght@300;400;500;600;700',
+    'DM Sans': 'DM+Sans:wght@300;400;500;600;700;800;900',
+    'Outfit': 'Outfit:wght@300;400;500;600;700;800;900',
+    'Sora': 'Sora:wght@300;400;500;600;700;800',
+    'JetBrains Mono': 'JetBrains+Mono:wght@300;400;500;600;700;800',
+    'Fira Code': 'Fira+Code:wght@300;400;500;600;700',
     'Poppins': 'Poppins:wght@300;400;500;600;700;800;900',
     'Manrope': 'Manrope:wght@300;400;500;600;700;800',
     'Plus Jakarta Sans': 'Plus+Jakarta+Sans:wght@300;400;500;600;700;800',
@@ -718,7 +727,8 @@
     reader.onload = ev => {
       try {
         imageHref = String(ev.target.result);
-        $clearImg.style.display = 'block';
+        document.getElementById('imgPreviewImg').src = imageHref;
+        document.getElementById('imgPreview').classList.add('show');
         paint();
       } catch (error) {
         showError('Failed to process image file.');
@@ -731,7 +741,7 @@
     };
     reader.readAsDataURL(file);
   });
-  $clearImg.addEventListener('click', ()=>{ imageHref=''; $imgFile.value=''; $clearImg.style.display = 'none'; paint(); });
+  $clearImg.addEventListener('click', ()=>{ imageHref=''; $imgFile.value=''; document.getElementById('imgPreview').classList.remove('show'); paint(); });
 
   $logoFile.addEventListener('change', e=>{
     const file = e.target.files && e.target.files[0];
@@ -755,7 +765,8 @@
     reader.onload = ev => {
       try {
         logoHref = String(ev.target.result);
-        $clearLogo.style.display = 'block';
+        document.getElementById('logoPreviewImg').src = logoHref;
+        document.getElementById('logoPreview').classList.add('show');
         paint();
       } catch (error) {
         showError('Failed to process logo file.');
@@ -768,7 +779,7 @@
     };
     reader.readAsDataURL(file);
   });
-  $clearLogo.addEventListener('click', ()=>{ logoHref=''; $logoFile.value=''; $clearLogo.style.display = 'none'; paint(); });
+  $clearLogo.addEventListener('click', ()=>{ logoHref=''; $logoFile.value=''; document.getElementById('logoPreview').classList.remove('show'); paint(); });
 
   function downloadAsJPG() {
     try {
@@ -795,7 +806,7 @@
         tagShapeColor: $tagShapeHex.value,
         textColor: $textHex.value,
         bgColor: $bgHex.value,
-        paddingSize: $paddingSize.value
+        paddingSize: 'auto'
       });
 
       const canvas = document.createElement('canvas');
@@ -862,7 +873,7 @@
         tagShapeColor: $tagShapeHex.value,
         textColor: $textHex.value,
         bgColor: $bgHex.value,
-        paddingSize: $paddingSize.value
+        paddingSize: 'auto'
       });
 
       // Store current layout
@@ -903,7 +914,7 @@
   
   // Text inputs get debounced updates for typing, others get immediate
   [$header, $sub, $tagText].forEach(n => n.addEventListener('input', debouncedPaint));
-  [$w,$h,$hw,$sw,$pattern,$imageRounded,$logoPos,$logoSize,$tagPos,$tagSize,$tagTextColor,$tagTextHex,$tagShapeColor,$tagShapeHex,$paddingSize,$bgColor,$bgHex,$textColor,$textHex,$sizePreset].forEach(n => n.addEventListener('change', paint));
+  [$w,$h,$hw,$sw,$pattern,$imageRounded,$logoPos,$logoSize,$tagPos,$tagSize,$tagTextColor,$tagTextHex,$tagShapeColor,$tagShapeHex,$paddingH,$paddingV,$bgColor,$bgHex,$textColor,$textHex,$sizePreset].forEach(n => n.addEventListener('change', paint));
   
   // Add special handling for width/height to update preset selector and validate bounds
   function validateDimensionInput(input, dimension) {
@@ -944,25 +955,7 @@
   document.getElementById('clearImg').addEventListener('click', paint);
   document.getElementById('clearLogo').addEventListener('click', paint);
   
-  // Layout mode functionality
-  const $manualMode = document.getElementById('manualMode');
-  const $randomMode = document.getElementById('randomMode');
-  
-  $manualMode.addEventListener('click', () => {
-    if (!$manualMode.classList.contains('active')) {
-      $manualMode.classList.add('active');
-      $randomMode.classList.remove('active');
-      isRandomMode = false;
-      paint();
-    }
-  });
-  
-  $randomMode.addEventListener('click', () => {
-    $randomMode.classList.add('active');
-    $manualMode.classList.remove('active');
-    isRandomMode = true;
-    paint(); // Always paint to generate new random layout
-  });
+  // Layout mode functionality - removed for current version
   
   // Profile menu functionality
   const profileMenuTrigger = document.getElementById('profileMenuTrigger');
@@ -1005,97 +998,15 @@
   // AI Generation functionality
   const $aiPrompt = q('aiPrompt');
   const $generateAI = q('generateAI');
-  const $aiStatus = q('aiStatus');
 
   function showAIStatus(message, type = 'loading') {
-    $aiStatus.textContent = message;
-    $aiStatus.className = `ai-status ${type}`;
-    $aiStatus.style.display = 'block';
+    console.log(`AI Status: ${message} (${type})`);
   }
 
   function hideAIStatus() {
-    $aiStatus.style.display = 'none';
+    console.log('AI Status cleared');
   }
 
-  async function generateTextWithDeepseek(prompt) {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${window.DEEPSEEK_API_KEY || ''}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a professional copywriter and design expert. Create compelling, concise content for layout designs.
-
-Instructions:
-- Generate a punchy header (max 8 words, inspiring and memorable)
-- Create an engaging subheader (max 25 words, descriptive and benefit-focused)  
-- Add a relevant tag if appropriate (max 2 words, or empty if not needed)
-- Also create an image generation prompt (describe the visual that would complement this content)
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "header": "Your header text here",
-  "subheader": "Your subheader text here", 
-  "tag": "TAG" or "",
-  "imagePrompt": "Detailed image description for image generation"
-}`
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 300,
-        temperature: 0.8
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Deepseek API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const responseText = data.choices[0].message.content.trim();
-    
-    try {
-      return JSON.parse(responseText);
-    } catch (parseError) {
-      throw new Error('Failed to parse AI response');
-    }
-  }
-
-  async function generateImageWithRecraft(imagePrompt) {
-    const response = await fetch('https://external.api.recraft.ai/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${window.RECRAFT_API_KEY || ''}`
-      },
-      body: JSON.stringify({
-        prompt: `Professional, high-quality business image: ${imagePrompt}. Style: clean, modern, suitable for business/marketing layouts. High contrast, visually striking, suitable for web use.`,
-        style: 'realistic_image',
-        size: '1365x1024',
-        response_format: 'url'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Recraft API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.data || data.data.length === 0) {
-      throw new Error('No image generated');
-    }
-
-    return data.data[0].url;
-  }
 
   async function generateWithAI() {
     const prompt = $aiPrompt.value.trim();
@@ -1146,7 +1057,10 @@ Respond ONLY with valid JSON in this exact format:
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ imagePrompt: textData.result.imagePrompt })
+        body: JSON.stringify({ 
+          imagePrompt: textData.result.imagePrompt,
+          styleId: $recraftStyleId.value.trim() || null
+        })
       });
 
       if (!imageResponse.ok) {

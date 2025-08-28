@@ -33,6 +33,359 @@
   <!-- Stylesheets -->
   <link rel="stylesheet" href="styles/main.css" />
   
+  <script>
+    // AI Button State Management
+    document.addEventListener('DOMContentLoaded', function() {
+      const aiPrompt = document.getElementById('aiPrompt');
+      const generateAI = document.getElementById('generateAI');
+      
+      // Function to update button state
+      function updateButtonState() {
+        const hasContent = aiPrompt.value.trim().length > 0;
+        generateAI.disabled = !hasContent;
+      }
+      
+      // Update state on input
+      aiPrompt.addEventListener('input', updateButtonState);
+      
+      // Initial state
+      updateButtonState();
+      
+      // Handle button click
+      generateAI.addEventListener('click', function() {
+        if (generateAI.disabled) return;
+        
+        // Add loading state
+        generateAI.classList.add('loading');
+        generateAI.disabled = true;
+        
+        // Simulate AI generation (replace with actual API call)
+        setTimeout(() => {
+          generateAI.classList.remove('loading');
+          generateAI.classList.add('success');
+          
+          // Reset to normal state after 2 seconds
+          setTimeout(() => {
+            generateAI.classList.remove('success');
+            updateButtonState();
+          }, 2000);
+        }, 3000);
+      });
+    });
+
+    // Toggle expandable groups
+    function toggleGroup(header) {
+      const group = header.parentElement;
+      group.classList.toggle('expanded');
+    }
+  </script>
+  
+  <style>
+    /* Prompt Container with Round Button */
+    .prompt-container {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .prompt-container textarea {
+      padding-right: 48px; /* Make room for the smaller button */
+      resize: vertical;
+    }
+
+    /* Round AI Generate Button - Beautiful, Minimalistic & Interactive */
+    .ai-generate-btn-round {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      padding: 8px;
+    }
+
+    .ai-generate-btn-round:hover:not(:disabled) {
+      box-shadow: 0 6px 24px rgba(249, 115, 22, 0.4);
+      background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+    }
+
+    .ai-generate-btn-round:active:not(:disabled) {
+      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+    }
+
+    .ai-generate-btn-round:focus:not(:disabled) {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2), 0 6px 24px rgba(249, 115, 22, 0.4);
+    }
+
+    /* Disabled State */
+    .ai-generate-btn-round:disabled {
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+      cursor: not-allowed;
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      opacity: 0.6;
+    }
+
+
+
+    .ai-generate-btn-round:disabled svg {
+      opacity: 0.5;
+    }
+
+    /* Loading State */
+    .ai-generate-btn-round.loading {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .ai-generate-btn-round.loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .ai-generate-btn-round.loading svg {
+      opacity: 0;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Success State */
+    .ai-generate-btn-round.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+    }
+
+    .ai-generate-btn-round.success::before {
+      content: '✓';
+      position: absolute;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .ai-generate-btn-round.success svg {
+      opacity: 0;
+    }
+
+    /* Error State */
+    .ai-generate-btn-round.error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+    }
+
+    .ai-generate-btn-round.error::before {
+      content: '✕';
+      position: absolute;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .ai-generate-btn-round.error svg {
+      opacity: 0;
+    }
+
+    /* Pulse Animation for Attention */
+    .ai-generate-btn-round.pulse {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3); }
+      50% { box-shadow: 0 6px 24px rgba(249, 115, 22, 0.6); }
+      100% { box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .ai-generate-btn-round {
+        width: 28px;
+        height: 28px;
+        bottom: 10px;
+        right: 10px;
+      }
+      
+      .prompt-container textarea {
+        padding-right: 48px;
+      }
+    }
+
+    /* Dark Mode Support */
+    @media (prefers-color-scheme: dark) {
+      .ai-generate-btn-round {
+        background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+        box-shadow: 0 4px 16px rgba(251, 146, 60, 0.3);
+      }
+      
+      .ai-generate-btn-round:hover:not(:disabled) {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        box-shadow: 0 6px 24px rgba(251, 146, 60, 0.4);
+      }
+    }
+
+    /* Expandable Groups - Figma Style */
+    .group.expandable {
+      background: transparent;
+      border: none;
+      margin-bottom: 0;
+    }
+
+    .group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 6px;
+      margin: 0 -8px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .group-header:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .group-header h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1a1a1a;
+      letter-spacing: -0.01em;
+    }
+
+    .expand-icon {
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #6b7280;
+      width: 14px;
+      height: 14px;
+    }
+
+    .group.expanded .expand-icon {
+      transform: rotate(90deg);
+    }
+
+    .group-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      background: transparent;
+    }
+
+    .group.expanded .group-content {
+      max-height: 800px;
+    }
+
+    .subgroup {
+      padding: 0 0 20px 0;
+      border-bottom: none;
+      margin-bottom: 16px;
+    }
+
+    .subgroup:last-child {
+      border-bottom: none;
+      margin-bottom: 8px;
+    }
+
+    .subgroup h5 {
+      margin: 0 0 12px 0;
+      font-size: 11px;
+      font-weight: 500;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Upload Component */
+    .image-upload-row,
+    .logo-upload-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .image-upload-row input[type="file"],
+    .logo-upload-row input[type="file"] {
+      flex: 1;
+    }
+
+    .image-upload-row button,
+    .logo-upload-row button {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    /* Minimalistic Scrollbar */
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.1);
+      border-radius: 2px;
+      transition: background-color 0.2s ease;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.2);
+    }
+
+    /* Firefox Scrollbar */
+    .sidebar {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,0,0,0.1) transparent;
+    }
+
+    /* Color Group Styling */
+    .color-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .color-group input[type="color"] {
+      width: 40px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .color-group input[type="text"] {
+      flex: 1;
+      font-family: 'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 12px;
+    }
+  </style>
+  
   <!-- Theme -->
   <meta name="theme-color" content="#1a1a1a" />
   <meta name="color-scheme" content="light" />
@@ -94,14 +447,49 @@
       <h4>AI Generation</h4>
       <div class="field">
         <label>Describe your layout</label>
-        <textarea id="aiPrompt" rows="3" placeholder="e.g., Create a tech startup homepage about productivity tools"></textarea>
+        <div class="prompt-container">
+          <textarea id="aiPrompt" rows="4" placeholder="e.g., Create a tech startup homepage about productivity tools"></textarea>
+          <button id="generateAI" class="ai-generate-btn-round" disabled>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="field">
-        <button id="generateAI" class="ai-generate-btn">Generate Layout</button>
-      </div>
-      <div id="aiStatus" class="ai-status" style="display: none;"></div>
       <div class="help">
         AI generation ready! Uses your configured Deepseek and Recraft API keys.
+      </div>
+    </div>
+
+    <!-- Size Group -->
+    <div class="group">
+      <h4>Size</h4>
+      <div class="field">
+        <label>Size preset</label>
+        <select id="sizePreset">
+          <option value="16:9-hd" selected>16:9 HD (1920×1080)</option>
+          <option value="16:9-4k">16:9 4K (3840×2160)</option>
+          <option value="4:3">4:3 (1024×768)</option>
+          <option value="1:1">Square (1080×1080)</option>
+          <option value="9:16">Story (1080×1920)</option>
+          <option value="a4-portrait">A4 Portrait (2480×3508)</option>
+          <option value="a4-landscape">A4 Landscape (3508×2480)</option>
+          <option value="letter-portrait">Letter Portrait (2550×3300)</option>
+          <option value="letter-landscape">Letter Landscape (3300×2550)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      
+      <div id="customSizeInputs" class="row">
+        <div class="field">
+          <label>Width</label>
+          <input id="w" type="number" value="1920" min="320" step="10"/>
+        </div>
+        <div class="field">
+          <label>Height</label>
+          <input id="h" type="number" value="1080" min="320" step="10"/>
+        </div>
       </div>
     </div>
 
@@ -118,43 +506,30 @@
       </div>
     </div>
 
-    <!-- Size Group -->
-    <div class="group">
-      <h4>Size</h4>
-      <div class="field">
-        <label>Size preset</label>
-        <select id="sizePreset">
-          <option value="16:9-hd">16:9 HD (1920×1080)</option>
-          <option value="16:9-4k">16:9 4K (3840×2160)</option>
-          <option value="4:3">4:3 (1024×768)</option>
-          <option value="1:1">Square (1080×1080)</option>
-          <option value="9:16">Story (1080×1920)</option>
-          <option value="a4-portrait">A4 Portrait (2480×3508)</option>
-          <option value="a4-landscape">A4 Landscape (3508×2480)</option>
-          <option value="letter-portrait">Letter Portrait (2550×3300)</option>
-          <option value="letter-landscape">Letter Landscape (3300×2550)</option>
-          <option value="custom" selected>Custom</option>
-        </select>
-      </div>
-      
-      <div id="customSizeInputs" class="row">
-        <div class="field">
-          <label>Width</label>
-          <input id="w" type="number" value="1200" min="320" step="10"/>
-        </div>
-        <div class="field">
-          <label>Height</label>
-          <input id="h" type="number" value="675" min="320" step="10"/>
-        </div>
-      </div>
-    </div>
-
     <!-- Image Group -->
     <div class="group">
       <h4>Image</h4>
       <div class="field">
-        <label>Upload</label>
-        <input id="imgFile" type="file" accept="image/*"/>
+        <div class="upload-component">
+          <input id="imgFile" type="file" accept="image/*" class="upload-hidden"/>
+          <button type="button" class="upload-btn" onclick="document.getElementById('imgFile').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17,8 12,3 7,8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Upload Image
+          </button>
+          <div id="imgPreview" class="upload-preview">
+            <img id="imgPreviewImg" class="upload-preview-img" alt="Image preview" />
+            <button id="clearImg" class="upload-preview-trash">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3,6 5,6 21,6"></polyline>
+                <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="row">
         <div class="field">
@@ -171,17 +546,32 @@
           <input id="imageRounded" type="checkbox"/>
         </div>
       </div>
-      <div class="field">
-        <button id="clearImg" class="clear-btn" style="display: none;">Clear</button>
-      </div>
     </div>
 
     <!-- Logo Group -->
     <div class="group">
       <h4>Logo</h4>
       <div class="field">
-        <label>Upload</label>
-        <input id="logoFile" type="file" accept="image/*"/>
+        <div class="upload-component">
+          <input id="logoFile" type="file" accept="image/*" class="upload-hidden"/>
+          <button type="button" class="upload-btn" onclick="document.getElementById('logoFile').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17,8 12,3 7,8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Upload Logo
+          </button>
+          <div id="logoPreview" class="upload-preview">
+            <img id="logoPreviewImg" class="upload-preview-img" alt="Logo preview" />
+            <button id="clearLogo" class="upload-preview-trash">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3,6 5,6 21,6"></polyline>
+                <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="row">
         <div class="field">
@@ -198,9 +588,6 @@
             <option value="m" selected>Medium</option>
             <option value="l">Large</option>
           </select>
-        </div>
-        <div class="field">
-          <button id="clearLogo" class="clear-btn" style="display: none;">Clear</button>
         </div>
       </div>
     </div>
@@ -240,102 +627,114 @@
         <div class="field">
           <label>Shape color</label>
           <div class="color-picker">
-            <input id="tagShapeColor" type="color" value="#111111"/>
-            <input id="tagShapeHex" type="text" value="#111111"/>
+            <input id="tagShapeColor" type="color" value="#1a1a1a"/>
+            <input id="tagShapeHex" type="text" value="#1a1a1a"/>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Colors Group -->
-    <div class="group">
-      <h4>Colors</h4>
-      <div class="row">
-        <div class="field">
-          <label>Background</label>
-          <div class="color-picker">
-            <input id="bgColor" type="color" value="#ffffff"/>
-            <input id="bgHex" type="text" value="#ffffff"/>
+    <!-- Advanced Settings Group (Expandable) -->
+    <div class="group expandable">
+      <div class="group-header" onclick="toggleGroup(this)">
+        <h4>Advanced Settings</h4>
+        <svg class="expand-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </div>
+      <div class="group-content">
+        <!-- Paddings -->
+        <div class="subgroup">
+          <h5>Paddings</h5>
+          <div class="row">
+            <div class="field">
+              <label>Horizontal</label>
+              <input id="paddingH" type="number" value="24" min="8" max="200" step="8"/>
+            </div>
+            <div class="field">
+              <label>Vertical</label>
+              <input id="paddingV" type="number" value="24" min="8" max="200" step="8"/>
+            </div>
           </div>
         </div>
-        <div class="field">
-          <label>Text</label>
-          <div class="color-picker">
-            <input id="textColor" type="color" value="#111111"/>
-            <input id="textHex" type="text" value="#111111"/>
+
+        <!-- Colors -->
+        <div class="subgroup">
+          <h5>Colors</h5>
+          <div class="row">
+            <div class="field">
+              <label>Background</label>
+              <div class="color-group">
+                <input id="bgColor" type="color" value="#ffffff"/>
+                <input id="bgHex" type="text" value="#ffffff"/>
+              </div>
+            </div>
+            <div class="field">
+              <label>Text</label>
+              <div class="color-group">
+                <input id="textColor" type="color" value="#1a1a1a"/>
+                <input id="textHex" type="text" value="#1a1a1a"/>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Layout Mode Group -->
-    <div class="group">
-      <h4>Layout Mode</h4>
-      <div class="row">
-        <div class="field">
-          <button id="manualMode" class="mode-btn active">Manual</button>
+        <!-- AI Style -->
+        <div class="subgroup">
+          <h5>AI Style</h5>
+          <div class="field">
+            <label>Recraft Style ID</label>
+            <input id="recraftStyleId" type="text" placeholder="e.g. recraft-style-v1"/>
+          </div>
         </div>
-        <div class="field">
-          <button id="randomMode" class="mode-btn">Random</button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Appearance Group -->
-    <div class="group">
-      <h4>Appearance</h4>
-      <div class="row">
-        <div class="field">
-          <label>Header weight</label>
-          <select id="hw">
-            <option value="300">Light (300)</option>
-            <option value="400">Regular (400)</option>
-            <option value="500">Medium (500)</option>
-            <option value="600">Semibold (600)</option>
-            <option value="700">Bold (700)</option>
-            <option value="800" selected>Extra Bold (800)</option>
-            <option value="900">Black (900)</option>
-          </select>
+        <!-- Fonts -->
+        <div class="subgroup">
+          <h5>Fonts</h5>
+          <div class="field">
+            <label>Font family</label>
+            <select id="fontFamily">
+              <option value="Inter, system-ui, -apple-system, Segoe UI, Roboto" selected>Inter (Modern)</option>
+              <option value="Poppins, sans-serif">Poppins (Friendly)</option>
+              <option value="Manrope, sans-serif">Manrope (Clean)</option>
+              <option value="Plus Jakarta Sans, sans-serif">Plus Jakarta Sans</option>
+              <option value="Space Grotesk, sans-serif">Space Grotesk (Geometric)</option>
+              <option value="DM Sans, sans-serif">DM Sans (Neutral)</option>
+              <option value="Outfit, sans-serif">Outfit (Modern)</option>
+              <option value="Sora, sans-serif">Sora (Tech)</option>
+              <option value="JetBrains Mono, monospace">JetBrains Mono</option>
+              <option value="Fira Code, monospace">Fira Code</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Header weight</label>
+              <select id="headerWeight">
+                <option value="100">Thin (100)</option>
+                <option value="300">Light (300)</option>
+                <option value="400">Regular (400)</option>
+                <option value="500">Medium (500)</option>
+                <option value="600">SemiBold (600)</option>
+                <option value="700">Bold (700)</option>
+                <option value="800" selected>ExtraBold (800)</option>
+                <option value="900">Black (900)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Sub weight</label>
+              <select id="subWeight">
+                <option value="100">Thin (100)</option>
+                <option value="300">Light (300)</option>
+                <option value="400" selected>Regular (400)</option>
+                <option value="500">Medium (500)</option>
+                <option value="600">SemiBold (600)</option>
+                <option value="700">Bold (700)</option>
+                <option value="800">ExtraBold (800)</option>
+                <option value="900">Black (900)</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="field">
-          <label>Sub weight</label>
-          <select id="sw">
-            <option value="300">Light (300)</option>
-            <option value="400" selected>Regular (400)</option>
-            <option value="500">Medium (500)</option>
-            <option value="600">Semibold (600)</option>
-            <option value="700">Bold (700)</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label>Font family</label>
-        <select id="ff" size="1">
-          <option value="Inter, system-ui, sans-serif" selected>Inter</option>
-          <option value="Poppins, sans-serif">Poppins</option>
-          <option value="Manrope, sans-serif">Manrope</option>
-          <option value="Plus Jakarta Sans, sans-serif">Plus Jakarta Sans</option>
-          <option value="Space Grotesk, sans-serif">Space Grotesk</option>
-          <option value="DM Sans, sans-serif">DM Sans</option>
-          <option value="Outfit, sans-serif">Outfit</option>
-          <option value="Satoshi, sans-serif">Satoshi</option>
-          <option value="General Sans, sans-serif">General Sans</option>
-          <option value="Cabinet Grotesk, sans-serif">Cabinet Grotesk</option>
-          <option value="Clash Display, sans-serif">Clash Display</option>
-          <option value="Familjen Grotesk, sans-serif">Familjen Grotesk</option>
-          <option value="Sora, sans-serif">Sora</option>
-          <option value="Cal Sans, sans-serif">Cal Sans</option>
-          <option value="Instrument Sans, sans-serif">Instrument Sans</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Padding</label>
-        <select id="paddingSize">
-          <option value="auto" selected>Auto</option>
-          <option value="s">Small</option>
-          <option value="m">Medium</option>
-          <option value="l">Large</option>
-        </select>
       </div>
     </div>
 
