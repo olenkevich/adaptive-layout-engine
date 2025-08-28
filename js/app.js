@@ -458,20 +458,11 @@
     const m = isRandomMode ? 
       fitRandomLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV}) :
       fitLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV});
-    
     const parts = [`<?xml version="1.0" encoding="UTF-8"?>`,
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`];
-    
-    // Add clipPath definition if image is rounded and exists
-    if (m.imgBox && imageRounded) {
-      parts.push(`<defs><clipPath id="imageClip"><rect x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" rx="12" ry="12"/></clipPath></defs>`);
-    }
-    
-    parts.push(`<rect width="100%" height="100%" fill="${esc(m.bgColor)}"/>`);
-    
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+      `<rect width="100%" height="100%" fill="${esc(m.bgColor)}"/>`];
     if (m.imgBox && m.imgBox.w>0 && m.imgBox.h>0 && imageHref) {
-      const clipAttr = imageRounded ? ` clip-path="url(#imageClip)"` : '';
-      parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice"${clipAttr}/>`);
+      parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice"/>`);
     }
     if (m.logoBox && logoHref) {
       parts.push(`<image href="${esc(logoHref)}" x="${m.logoBox.x}" y="${m.logoBox.y}" width="${m.logoBox.w}" height="${m.logoBox.h}" preserveAspectRatio="xMidYMid meet"/>`);
@@ -878,6 +869,7 @@
       $wrap.innerHTML = svg;
       $wrap.style.width = width + 'px';
       $wrap.style.height = height + 'px';
+      $wrap.style.borderRadius = $imageRounded.checked ? '12px' : '6px';
       
       updateScale(width, height);
     }catch(e){ 
