@@ -30,14 +30,20 @@
   <link rel="preload" href="styles/main.css" as="style" />
   <link rel="preload" href="js/app.js" as="script" />
   
+  <!-- Google Fonts for font pairings -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600;700&family=EB+Garamond:wght@400;500;600&family=Playfair+Display:wght@400;600;700&family=Libre+Franklin:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/main.css?v=20250902" />
   
   <script>
-    // AI Button State Management
+    // AI Button State Management with Emotional Loading
     document.addEventListener('DOMContentLoaded', function() {
       const aiPrompt = document.getElementById('aiPrompt');
       const generateAI = document.getElementById('generateAI');
+      const loadingStatus = document.getElementById('aiLoadingStatus');
       
       // Function to update button state
       function updateButtonState() {
@@ -51,26 +57,80 @@
       // Initial state
       updateButtonState();
       
-      // Handle button click
-      generateAI.addEventListener('click', function() {
-        if (generateAI.disabled) return;
+      // Emotional loading steps
+      const loadingSteps = [
+        { text: "🤔 Thinking about your idea...", duration: 1000 },
+        { text: "✍️ Writing compelling copy...", duration: 1500 },
+        { text: "🎨 Creating visual concepts...", duration: 2000 },
+        { text: "🖼️ Generating your image...", duration: 3000 },
+        { text: "✨ Adding finishing touches...", duration: 1000 }
+      ];
+      
+      let currentStep = 0;
+      let stepTimer;
+      
+      function showLoadingStep(stepIndex) {
+        if (stepIndex >= loadingSteps.length) {
+          return;
+        }
         
-        // Add loading state
-        generateAI.classList.add('loading');
+        const step = loadingSteps[stepIndex];
+        const loadingText = loadingStatus.querySelector('.loading-text');
+        loadingText.textContent = step.text;
+        
+        stepTimer = setTimeout(() => {
+          showLoadingStep(stepIndex + 1);
+        }, step.duration);
+      }
+      
+      function startEmotionalLoading() {
+        currentStep = 0;
+        loadingStatus.style.display = 'block';
         generateAI.disabled = true;
-        
-        // Simulate AI generation (replace with actual API call)
-        setTimeout(() => {
-          generateAI.classList.remove('loading');
-          generateAI.classList.add('success');
-          
-          // Reset to normal state after 2 seconds
-          setTimeout(() => {
-            generateAI.classList.remove('success');
-            updateButtonState();
-          }, 2000);
-        }, 3000);
-      });
+        generateAI.innerHTML = '<div class="loading-spinner" style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>';
+        showLoadingStep(0);
+      }
+      
+      function stopEmotionalLoading() {
+        if (stepTimer) {
+          clearTimeout(stepTimer);
+        }
+        loadingStatus.style.display = 'none';
+        generateAI.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>Generate with AI';
+        updateButtonState();
+      }
+      
+      // Override the default generateWithAI behavior
+      window.startEmotionalLoading = startEmotionalLoading;
+      window.stopEmotionalLoading = stopEmotionalLoading;
+    });
+
+    // Simple Analog Clock
+    function updateClock() {
+      const now = new Date();
+      const hours = now.getHours() % 12;
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+
+      // Calculate angles (360 degrees = full circle)
+      const hourAngle = (hours * 30) + (minutes * 0.5); // 30 degrees per hour + minute adjustment
+      const minuteAngle = minutes * 6; // 6 degrees per minute
+      const secondAngle = seconds * 6; // 6 degrees per second
+
+      // Apply rotations
+      const hourHand = document.querySelector('.hour-hand');
+      const minuteHand = document.querySelector('.minute-hand');
+      const secondHand = document.querySelector('.second-hand');
+
+      if (hourHand) hourHand.style.transform = `rotate(${hourAngle}deg)`;
+      if (minuteHand) minuteHand.style.transform = `rotate(${minuteAngle}deg)`;
+      if (secondHand) secondHand.style.transform = `rotate(${secondAngle}deg)`;
+    }
+
+    // Update clock immediately and then every second
+    document.addEventListener('DOMContentLoaded', function() {
+      updateClock();
+      setInterval(updateClock, 1000);
     });
 
     // Toggle expandable groups
@@ -81,168 +141,6 @@
   </script>
   
   <style>
-    /* Prompt Container with Round Button */
-    .prompt-container {
-      position: relative;
-      display: inline-block;
-      width: 100%;
-    }
-
-    .prompt-container textarea {
-      padding-right: 48px; /* Make room for the smaller button */
-      resize: vertical;
-    }
-
-    /* Round AI Generate Button - Beautiful, Minimalistic & Interactive */
-    .ai-generate-btn-round {
-      position: absolute;
-      bottom: 12px;
-      right: 12px;
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-      border: none;
-      border-radius: 50%;
-      color: white;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      padding: 8px;
-    }
-
-    .ai-generate-btn-round:hover:not(:disabled) {
-      box-shadow: 0 6px 24px rgba(249, 115, 22, 0.4);
-      background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
-    }
-
-    .ai-generate-btn-round:active:not(:disabled) {
-      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
-    }
-
-    .ai-generate-btn-round:focus:not(:disabled) {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2), 0 6px 24px rgba(249, 115, 22, 0.4);
-    }
-
-    /* Disabled State */
-    .ai-generate-btn-round:disabled {
-      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
-      cursor: not-allowed;
-      pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      opacity: 0.6;
-    }
-
-
-
-    .ai-generate-btn-round:disabled svg {
-      opacity: 0.5;
-    }
-
-    /* Loading State */
-    .ai-generate-btn-round.loading {
-      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-
-    .ai-generate-btn-round.loading::after {
-      content: '';
-      position: absolute;
-      width: 16px;
-      height: 16px;
-      border: 2px solid transparent;
-      border-top: 2px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .ai-generate-btn-round.loading svg {
-      opacity: 0;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Success State */
-    .ai-generate-btn-round.success {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
-    }
-
-    .ai-generate-btn-round.success::before {
-      content: '✓';
-      position: absolute;
-      font-size: 16px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .ai-generate-btn-round.success svg {
-      opacity: 0;
-    }
-
-    /* Error State */
-    .ai-generate-btn-round.error {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
-    }
-
-    .ai-generate-btn-round.error::before {
-      content: '✕';
-      position: absolute;
-      font-size: 16px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .ai-generate-btn-round.error svg {
-      opacity: 0;
-    }
-
-    /* Pulse Animation for Attention */
-    .ai-generate-btn-round.pulse {
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3); }
-      50% { box-shadow: 0 6px 24px rgba(249, 115, 22, 0.6); }
-      100% { box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3); }
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      .ai-generate-btn-round {
-        width: 28px;
-        height: 28px;
-        bottom: 10px;
-        right: 10px;
-      }
-      
-      .prompt-container textarea {
-        padding-right: 48px;
-      }
-    }
-
-    /* Dark Mode Support */
-    @media (prefers-color-scheme: dark) {
-      .ai-generate-btn-round {
-        background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-        box-shadow: 0 4px 16px rgba(251, 146, 60, 0.3);
-      }
-      
-      .ai-generate-btn-round:hover:not(:disabled) {
-        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-        box-shadow: 0 6px 24px rgba(251, 146, 60, 0.4);
-      }
-    }
 
 
     /* Expandable Groups - Figma Style */
@@ -365,7 +263,124 @@
       scrollbar-color: rgba(0,0,0,0.1) transparent;
     }
 
-    /* Color Group Styling */
+    /* Generate Button Styling */
+    .generate-btn {
+      width: 100%;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border: 1px solid #ea580c;
+      border-radius: 6px;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
+      font-size: 14px;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+      border-color: #dc2626;
+      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .generate-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
+    }
+
+    .generate-btn:disabled {
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+      border-color: #d1d5db;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+      opacity: 0.6;
+    }
+
+    /* Loading States */
+    .loading-status {
+      padding: 16px;
+      background: rgba(249, 115, 22, 0.05);
+      border: 1px solid rgba(249, 115, 22, 0.1);
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .loading-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .loading-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(249, 115, 22, 0.2);
+      border-top: 2px solid #f97316;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-text {
+      color: #f97316;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    /* UI Group Spacing */
+    .group {
+      margin-bottom: 32px;
+    }
+
+    .group:last-child {
+      margin-bottom: 20px;
+    }
+
+    .subgroup {
+      margin-bottom: 24px;
+    }
+
+    .subgroup:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Color Picker Consistency */
+    .color-picker {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .color-picker input[type="color"] {
+      width: 40px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .color-picker input[type="text"] {
+      flex: 1;
+      font-family: 'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    /* Remove old color-group styling */
     .color-group {
       display: flex;
       gap: 8px;
@@ -384,6 +399,82 @@
       flex: 1;
       font-family: 'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
       font-size: 12px;
+    }
+
+    /* Simple Analog Clock */
+    .analog-clock {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .clock-face {
+      width: 80px;
+      height: 80px;
+      border: 1px solid #d1d5db;
+      border-radius: 50%;
+      background: #ffffff;
+      position: relative;
+    }
+
+    .clock-hand {
+      position: absolute;
+      background: #1f2937;
+      transform-origin: bottom center;
+    }
+
+    .hour-hand {
+      width: 3px;
+      height: 22px;
+      top: 18px;
+      left: 50%;
+      margin-left: -1.5px;
+    }
+
+    .minute-hand {
+      width: 2px;
+      height: 30px;
+      top: 10px;
+      left: 50%;
+      margin-left: -1px;
+    }
+
+    .second-hand {
+      width: 1px;
+      height: 32px;
+      top: 8px;
+      left: 50%;
+      margin-left: -0.5px;
+      background: #dc2626;
+    }
+
+    .clock-center {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #1f2937;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .clock-face {
+        background: #374151;
+        border-color: #6b7280;
+      }
+      
+      .clock-hand {
+        background: #f9fafb;
+      }
+      
+      .clock-center {
+        background: #f9fafb;
+      }
     }
   </style>
   
@@ -453,15 +544,39 @@
       <h4>AI Generation</h4>
       <div class="field">
         <label>Describe your layout</label>
-        <div class="prompt-container">
-          <textarea id="aiPrompt" rows="4" placeholder="e.g., Create a tech startup homepage about productivity tools"></textarea>
-          <button id="generateAI" class="ai-generate-btn-round" disabled>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12h14"></path>
-              <path d="m12 5 7 7-7 7"></path>
-            </svg>
-          </button>
+        <textarea id="aiPrompt" rows="4" placeholder="e.g., Create a tech startup homepage about productivity tools"></textarea>
+      </div>
+      
+      <!-- Generate Button -->
+      <div class="field">
+        <button id="generateAI" class="generate-btn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
+          Generate with AI
+        </button>
+      </div>
+      
+      <!-- Loading Status -->
+      <div id="aiLoadingStatus" class="loading-status" style="display: none;">
+        <div class="loading-step">
+          <div class="loading-icon">
+            <div class="loading-spinner"></div>
+          </div>
+          <div class="loading-text">Thinking...</div>
         </div>
+      </div>
+      
+      <!-- Download Button -->
+      <div class="field">
+        <button id="downloadJpg" class="download-btn" style="width: 100%; padding: 12px; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #3b82f6; border: 1px solid #2563eb; border-radius: 6px; color: white; font-weight: 500; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#2563eb'; this.style.borderColor='#1d4ed8'" onmouseout="this.style.background='#3b82f6'; this.style.borderColor='#2563eb'">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+          </svg>
+          Download JPG
+        </button>
       </div>
       
       <!-- Shuffle Layout Button -->
@@ -484,11 +599,11 @@
       <div class="field">
         <label>Size preset</label>
         <select id="sizePreset">
-          <option value="16:9-hd" selected>16:9 HD (1920×1080)</option>
+          <option value="16:9-hd">16:9 HD (1920×1080)</option>
           <option value="16:9-4k">16:9 4K (3840×2160)</option>
           <option value="4:3">4:3 (1024×768)</option>
           <option value="1:1">Square (1080×1080)</option>
-          <option value="9:16">Story (1080×1920)</option>
+          <option value="9:16" selected>Story (1080×1920)</option>
           <option value="a4-portrait">A4 Portrait (2480×3508)</option>
           <option value="a4-landscape">A4 Landscape (3508×2480)</option>
           <option value="letter-portrait">Letter Portrait (2550×3300)</option>
@@ -685,20 +800,18 @@
         <!-- Colors -->
         <div class="subgroup">
           <h5>Colors</h5>
-          <div class="row">
-            <div class="field">
-              <label>Background</label>
-              <div class="color-group">
-                <input id="bgColor" type="color" value="#ffffff"/>
-                <input id="bgHex" type="text" value="#ffffff"/>
-              </div>
+          <div class="field">
+            <label>Background</label>
+            <div class="color-picker">
+              <input id="bgColor" type="color" value="#ffffff"/>
+              <input id="bgHex" type="text" value="#ffffff"/>
             </div>
-            <div class="field">
-              <label>Text</label>
-              <div class="color-group">
-                <input id="textColor" type="color" value="#1a1a1a"/>
-                <input id="textHex" type="text" value="#1a1a1a"/>
-              </div>
+          </div>
+          <div class="field">
+            <label>Text</label>
+            <div class="color-picker">
+              <input id="textColor" type="color" value="#1a1a1a"/>
+              <input id="textHex" type="text" value="#1a1a1a"/>
             </div>
           </div>
         </div>
@@ -764,23 +877,25 @@
 
     <div id="err"></div>
     
-    <p class="help">Real-size preview, scales to fit viewport</p>
   </aside>
 
   <main>
     <div id="viewport">
       <div id="wrap"></div>
-      <button id="downloadJpg" class="download-btn">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-        </svg>
-        Download JPG
-      </button>
+    </div>
+    
+    <!-- Simple Analog Clock -->
+    <div id="analogClock" class="analog-clock">
+      <div class="clock-face">
+        <div class="clock-hand hour-hand"></div>
+        <div class="clock-hand minute-hand"></div>
+        <div class="clock-hand second-hand"></div>
+        <div class="clock-center"></div>
+      </div>
     </div>
   </main>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=20250902"></script>
   
   <!-- Test image for debugging -->
   <script>

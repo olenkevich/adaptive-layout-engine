@@ -2,6 +2,23 @@
   const clamp=(min,v,max)=>Math.max(min,Math.min(v,max));
   const round8=v=>Math.round(v/8)*8;
   const q=id=>document.getElementById(id);
+  
+  // Predefined Recraft style IDs for randomization
+  const PREDEFINED_STYLES = [
+    '41501ef8-26a6-4d1c-946c-d8b659ff11c3',
+    '90cf050a-5985-4ca8-b255-d370831701ca', 
+    '7be82d9c-ad40-483e-b235-389043675ad2',
+    'da5cc27d-0389-4b5c-8a0d-fe5b76937214',
+    'e4537304-308d-4ccd-a319-9f3ad2bf1680',
+    '641438a8-5f63-4710-b7e9-52bd3eab4c46',
+    '9a17ffcd-1f03-4cbf-a49b-b24117bfc407',
+    'ad161dfc-bcf4-49b3-a8ab-4745b66ee3e8'
+  ];
+  
+  // Helper function to get random Recraft style ID
+  function getRandomStyleId() {
+    return PREDEFINED_STYLES[Math.floor(Math.random() * PREDEFINED_STYLES.length)];
+  }
 
   // Layout constants
   const LAYOUT_CONSTANTS = {
@@ -24,10 +41,10 @@
     MIN_SIDE_FRACTION: 0.26,
     MIN_TOP_FRACTION: 0.26,
     
-    // Spacing
-    LOGO_GAP: 12,
-    TAG_GAP: 8,
-    MIN_IMG_TEXT_GAP: 16,
+    // Spacing - increased for better separation
+    LOGO_GAP: 24,
+    TAG_GAP: 16,
+    MIN_IMG_TEXT_GAP: 24,
     
     // File constraints
     MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
@@ -108,12 +125,23 @@
   function choosePattern(auto, aspect, hasImage){
     if(!hasImage) return 'none';
     if(auto!=='auto') return auto; // This preserves 'left', 'side', 'top' selections
-    return aspect>=1.3 ? 'side' : 'top';
+    
+    // Minimize two-column variations for vertical formats
+    if (aspect < 1.0) {
+      // Vertical format: almost always stack (95% top, 5% side)
+      return Math.random() < 0.05 ? 'side' : 'top';
+    } else if (aspect < 1.2) {
+      // Square-ish: mostly stack (80% top, 20% side)
+      return Math.random() < 0.2 ? 'side' : 'top';
+    } else {
+      // Wide format: prefer side but allow some stacking
+      return aspect >= 1.6 ? 'side' : (Math.random() < 0.7 ? 'side' : 'top');
+    }
   }
 
-  function fitLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing}){
+  function fitLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing,centerAlign}){
     // Create cache key for layout (excluding colors since they don't affect layout)
-    const layoutKey = `${W}:${H}:${header}:${subheader}:${fontFamily}:${headerWeight}:${subWeight}:${patternChoice}:${imageRounded}:${imagePadding}:${logoPos}:${logoSize}:${tagPos}:${tagSize}:${paddingH}:${paddingV}`;
+    const layoutKey = `${W}:${H}:${header}:${subheader}:${fontFamily}:${headerWeight}:${subWeight}:${patternChoice}:${imageRounded}:${imagePadding}:${logoPos}:${logoSize}:${tagPos}:${tagSize}:${paddingH}:${paddingV}:${centerAlign || 'false'}`;
     
     if (layoutCache.has(layoutKey)) {
       const cached = layoutCache.get(layoutKey);
@@ -129,6 +157,7 @@
     const minRequiredPadding = 48;
     const calculatedPadding = paddingH || round8(clamp(minRequiredPadding, minDim*0.10, 120));
     const padding = Math.max(minRequiredPadding, calculatedPadding);
+    
     const ratio = LAYOUT_CONSTANTS.HEADER_TO_SUB_RATIO;
     const lhH = LAYOUT_CONSTANTS.HEADER_LINE_HEIGHT;
     const lhS = LAYOUT_CONSTANTS.SUB_LINE_HEIGHT;
@@ -149,8 +178,8 @@
     const sideFracMin = LAYOUT_CONSTANTS.MIN_SIDE_FRACTION;
     const topFracMin = LAYOUT_CONSTANTS.MIN_TOP_FRACTION;
 
-    const logoBase = Math.floor(minDim * 0.10);
-    const sizeMap = { s: Math.max(48, Math.floor(logoBase*0.8)), m: Math.max(64, logoBase), l: Math.max(88, Math.floor(logoBase*1.4)) };
+    const logoBase = Math.floor(minDim * 0.12);  // Increased base size from 0.10 to 0.12
+    const sizeMap = { s: Math.max(60, Math.floor(logoBase*0.9)), m: Math.max(80, Math.floor(logoBase*1.1)), l: Math.max(120, Math.floor(logoBase*1.6)) };
     const hasLogo = !!logoHref;
     const logoPosTop = (logoPos==='top');
     const logoGap = LAYOUT_CONSTANTS.LOGO_GAP;
@@ -278,33 +307,47 @@
       console.log('SIDE positioning: text at x=', textX, ', image will be at right');
     }
     
-    const headBox = { x: textX, y: baseY + fit.headYoffset, w: fit.tw, h: fit.headH };
-    const subBox  = { x: headBox.x, y: Math.round(headBox.y + fit.headH + fit.gap), w: fit.tw, h: fit.subH };
+    // For vertical formats, use center alignment only when image is on top/bottom (not sides)
+    const isVertical = aspect < 1; // Height > Width
+    const hasVerticalImageLayout = pat === 'top' || pat === 'none'; // Image on top/bottom or no image
+    const shouldCenterAlign = isVertical && centerAlign && hasVerticalImageLayout;
+    
+    let headBox, subBox;
+    if (shouldCenterAlign) {
+      // Center-aligned layout for vertical formats
+      headBox = { x: baseX, y: baseY + fit.headYoffset, w: W - 2*baseX, h: fit.headH, centered: true };
+      subBox = { x: baseX, y: Math.round(headBox.y + fit.headH + fit.gap), w: W - 2*baseX, h: fit.subH, centered: true };
+    } else {
+      // Default left-aligned layout
+      headBox = { x: textX, y: baseY + fit.headYoffset, w: fit.tw, h: fit.headH };
+      subBox = { x: headBox.x, y: Math.round(headBox.y + fit.headH + fit.gap), w: fit.tw, h: fit.subH };
+    }
 
     let logoBox=null;
     if (hasLogo) {
-      // Position logo in text column area, not full content area
-      const logoX = textX; // Use text column x position
-      if (logoPosTop) logoBox = { x: logoX, y: baseY + (fit.imgBox && fit.imgBox.mode==='top' ? fit.imgBox.h + fit.imgTextGapPx : 0), w: fit.logoH, h: fit.logoH };
-      else logoBox = { x: logoX, y: H - pad - fit.logoH, w: fit.logoH, h: fit.logoH };
+      // Position logo - center it if in center mode
+      const logoX = shouldCenterAlign ? Math.floor((W - fit.logoH) / 2) : textX;
+      if (logoPosTop) logoBox = { x: logoX, y: baseY + (fit.imgBox && fit.imgBox.mode==='top' ? fit.imgBox.h + fit.imgTextGapPx : 0), w: fit.logoH, h: fit.logoH, centered: shouldCenterAlign };
+      else logoBox = { x: logoX, y: H - pad - fit.logoH, w: fit.logoH, h: fit.logoH, centered: shouldCenterAlign };
     }
 
     let tagBox=null;
     if (hasTag) {
-      // Position tag in text column area, accounting for logo position
-      const tagX = textX;
+      // Position tag - use full width for centering if in center mode  
+      const tagX = shouldCenterAlign ? baseX : textX;
+      const tagWidth = shouldCenterAlign ? W - 2*baseX : fit.tw;
       if (tagPosAbove) {
         let tagY = baseY + (fit.imgBox && fit.imgBox.mode==='top' ? fit.imgBox.h + fit.imgTextGapPx : 0);
         if (hasLogo && logoPosTop) {
           tagY += fit.logoH + logoGap;
         }
-        tagBox = { x: tagX, y: tagY, w: fit.tw, h: fit.tagH };
+        tagBox = { x: tagX, y: tagY, w: tagWidth, h: fit.tagH, centered: shouldCenterAlign };
       } else {
         let tagY = H - pad - fit.tagH;
         if (hasLogo && !logoPosTop) {
           tagY -= fit.logoH + logoGap;
         }
-        tagBox = { x: tagX, y: tagY, w: fit.tw, h: fit.tagH };
+        tagBox = { x: tagX, y: tagY, w: tagWidth, h: fit.tagH, centered: shouldCenterAlign };
       }
     }
 
@@ -536,21 +579,71 @@
   }
 
   function renderSVG(opts){
-    const {width,height,header,subheader,headerWeight,subWeight,fontFamily,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing} = opts;
+    const {width,height,header,subheader,headerWeight,subWeight,fontFamily,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing,centerAlign} = opts;
     const m = isRandomMode ? 
       fitRandomLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,imagePadding,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing}) :
-      fitLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing});
+      fitLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing,centerAlign});
     const parts = [`<?xml version="1.0" encoding="UTF-8"?>`,
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
       `<rect width="100%" height="100%" fill="${esc(m.bgColor)}"/>`];
+
+
     console.log('🖼️ Image rendering check:', { hasImgBox: !!m.imgBox, imgBox: m.imgBox, hasImageHref: !!imageHref, pattern: m.pattern });
     if (m.imgBox && m.imgBox.w>0 && m.imgBox.h>0 && imageHref) {
       console.log('✅ Rendering image with box:', m.imgBox);
       if (imageRounded) {
-        // Add rounded corners using clipPath
         const radius = Math.min(m.imgBox.w, m.imgBox.h) * 0.1; // 10% radius
         const clipId = `imgClip_${Date.now()}`;
-        parts.push(`<defs><clipPath id="${clipId}"><rect x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" rx="${radius}" ry="${radius}"/></clipPath></defs>`);
+        
+        if (imagePadding === 'fill') {
+          // For edge-fill images, only round inner corners (not touching layout edges)
+          const isAtLeftEdge = m.imgBox.x <= 0;
+          const isAtRightEdge = (m.imgBox.x + m.imgBox.w) >= width;
+          const isAtTopEdge = m.imgBox.y <= 0;
+          const isAtBottomEdge = (m.imgBox.y + m.imgBox.h) >= height;
+          
+          // Create complex clipPath with selective rounded corners
+          const pathData = [];
+          const x = m.imgBox.x;
+          const y = m.imgBox.y;
+          const w = m.imgBox.w;
+          const h = m.imgBox.h;
+          
+          // Start from top-left and go clockwise
+          pathData.push(`M ${x + (isAtLeftEdge || isAtTopEdge ? 0 : radius)} ${y}`);
+          
+          // Top edge to top-right corner
+          pathData.push(`L ${x + w - (isAtRightEdge || isAtTopEdge ? 0 : radius)} ${y}`);
+          if (!isAtRightEdge && !isAtTopEdge) {
+            pathData.push(`Q ${x + w} ${y} ${x + w} ${y + radius}`);
+          }
+          
+          // Right edge to bottom-right corner
+          pathData.push(`L ${x + w} ${y + h - (isAtRightEdge || isAtBottomEdge ? 0 : radius)}`);
+          if (!isAtRightEdge && !isAtBottomEdge) {
+            pathData.push(`Q ${x + w} ${y + h} ${x + w - radius} ${y + h}`);
+          }
+          
+          // Bottom edge to bottom-left corner
+          pathData.push(`L ${x + (isAtLeftEdge || isAtBottomEdge ? 0 : radius)} ${y + h}`);
+          if (!isAtLeftEdge && !isAtBottomEdge) {
+            pathData.push(`Q ${x} ${y + h} ${x} ${y + h - radius}`);
+          }
+          
+          // Left edge to top-left corner
+          pathData.push(`L ${x} ${y + (isAtLeftEdge || isAtTopEdge ? 0 : radius)}`);
+          if (!isAtLeftEdge && !isAtTopEdge) {
+            pathData.push(`Q ${x} ${y} ${x + radius} ${y}`);
+          }
+          
+          pathData.push('Z');
+          
+          parts.push(`<defs><clipPath id="${clipId}"><path d="${pathData.join(' ')}"/></clipPath></defs>`);
+        } else {
+          // For normal layout images, round all corners
+          parts.push(`<defs><clipPath id="${clipId}"><rect x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" rx="${radius}" ry="${radius}"/></clipPath></defs>`);
+        }
+        
         parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`);
       } else {
         parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice"/>`);
@@ -578,22 +671,36 @@
       const tagTextWidth = tagMeasure(tagTextSize, m.tagText.trim());
       const tagContainerWidth = tagTextWidth + (tagPaddingX * 2);
       
-      // Background rounded rectangle - wraps text tightly
-      parts.push(`<rect x="${m.tagBox.x}" y="${m.tagBox.y}" width="${tagContainerWidth}" height="${m.tagBox.h}" rx="${tagRadius}" ry="${tagRadius}" fill="${esc(m.tagShapeColor)}"/>`);
+      // Position tag background - center it if in center mode
+      const tagRectX = m.tagBox.centered ? m.tagBox.x + (m.tagBox.w - tagContainerWidth)/2 : m.tagBox.x;
+      parts.push(`<rect x="${tagRectX}" y="${m.tagBox.y}" width="${tagContainerWidth}" height="${m.tagBox.h}" rx="${tagRadius}" ry="${tagRadius}" fill="${esc(m.tagShapeColor)}"/>`);
       
-      // Tag text - centered in container
+      // Text inside tag - center it if in center mode
       const tagY = m.tagBox.y + m.tagBox.h * 0.5 + tagTextSize * 0.35;
+      const tagTextX = m.tagBox.centered ? tagRectX + tagContainerWidth/2 : m.tagBox.x + tagPaddingX;
+      const tagAnchor = m.tagBox.centered ? ' text-anchor="middle"' : '';
       const tagLetterSpacing = m.subLetterSpacing || '0'; // Tags use sub letter-spacing since they're smaller text
-      parts.push(`<text x="${m.tagBox.x + tagPaddingX}" y="${tagY}" font-family="${fontFamily}" font-size="${tagTextSize}" font-weight="500" fill="${esc(m.tagTextColor)}" letter-spacing="${tagLetterSpacing}">${esc(m.tagText.trim())}</text>`);
+      parts.push(`<text x="${tagTextX}" y="${tagY}" font-family="${fontFamily}" font-size="${tagTextSize}" font-weight="500" fill="${esc(m.tagTextColor)}" letter-spacing="${tagLetterSpacing}"${tagAnchor}>${esc(m.tagText.trim())}</text>`);
     }
     const txt = esc(textColor);
+    // Apply font pairings and custom line heights
+    const currentTypography = window.currentTypography || {};
+    const headerFont = currentTypography.headerFamily || fontFamily;
+    const subFont = currentTypography.subFamily || fontFamily;
+    const headerLineHeightMultiplier = parseFloat(currentTypography.headerLineHeight || '1.2');
+    const subLineHeightMultiplier = parseFloat(currentTypography.subLineHeight || '1.44');
+    
     m.headLines.forEach((ln,i)=>{
-      const y = m.headBox.y + (i+1)*m.headerSize*1.20 - m.headerSize*0.20;
-      parts.push(`<text x="${m.headBox.x}" y="${y}" font-family="${fontFamily}" font-size="${m.headerSize}" font-weight="${headerWeight}" letter-spacing="${m.headerLetterSpacing || '0'}" fill="${txt}">${esc(ln)}</text>`);
+      const y = m.headBox.y + (i+1)*m.headerSize*headerLineHeightMultiplier - m.headerSize*0.20;
+      const headX = m.headBox.centered ? m.headBox.x + m.headBox.w/2 : m.headBox.x;
+      const anchor = m.headBox.centered ? ' text-anchor="middle"' : '';
+      parts.push(`<text x="${headX}" y="${y}" font-family="${headerFont}" font-size="${m.headerSize}" font-weight="${headerWeight}" letter-spacing="${m.headerLetterSpacing || '0'}" fill="${txt}"${anchor}>${esc(ln)}</text>`);
     });
     m.subLines.forEach((ln,i)=>{
-      const y = m.subBox.y + (i+1)*m.subSize*1.44 - m.subSize*0.44;
-      parts.push(`<text x="${m.subBox.x}" y="${y}" font-family="${fontFamily}" font-size="${m.subSize}" font-weight="${subWeight}" letter-spacing="${m.subLetterSpacing || '0'}" fill="${txt}">${esc(ln)}</text>`);
+      const y = m.subBox.y + (i+1)*m.subSize*subLineHeightMultiplier - m.subSize*0.44;
+      const subX = m.subBox.centered ? m.subBox.x + m.subBox.w/2 : m.subBox.x;
+      const anchor = m.subBox.centered ? ' text-anchor="middle"' : '';
+      parts.push(`<text x="${subX}" y="${y}" font-family="${subFont}" font-size="${m.subSize}" font-weight="${subWeight}" letter-spacing="${m.subLetterSpacing || '0'}" fill="${txt}"${anchor}>${esc(ln)}</text>`);
     });
     parts.push(`</svg>`);
     return {svg: parts.join("\n"), meta: m};
@@ -615,6 +722,10 @@
   let imageHref = '', logoHref = '';
   let currentSvg = '', currentWidth = 1200, currentHeight = 675;
   let isRandomMode = false;
+  
+  // Cache for extracted image colors to avoid re-processing on shuffle
+  let cachedImageColors = null;
+  let lastImageUrl = null;
   
   // Expose functions globally for the randomization button
   window.enableRandomGrids = () => {
@@ -642,13 +753,11 @@
     'Sora': 'Sora:wght@300;400;500;600;700;800',
     'JetBrains Mono': 'JetBrains+Mono:wght@300;400;500;600;700;800',
     'Fira Code': 'Fira+Code:wght@300;400;500;600;700',
-    'Poppins': 'Poppins:wght@300;400;500;600;700;800;900',
-    'Manrope': 'Manrope:wght@300;400;500;600;700;800',
-    'Plus Jakarta Sans': 'Plus+Jakarta+Sans:wght@300;400;500;600;700;800',
-    'Space Grotesk': 'Space+Grotesk:wght@300;400;500;600;700',
-    'DM Sans': 'DM+Sans:wght@300;400;500;600;700;800;900',
-    'Outfit': 'Outfit:wght@300;400;500;600;700;800;900',
-    'Satoshi': 'Satoshi:wght@300;400;500;600;700;800;900',
+    // Premium additions - safe, well-tested fonts
+    'Fraunces': 'Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,800',
+    'Public Sans': 'Public+Sans:wght@300;400;500;600;700;800',
+    'Source Sans Pro': 'Source+Sans+Pro:wght@300;400;500;600;700;800',
+    'Playfair Display': 'Playfair+Display:wght@400;500;600;700;800;900',
     'General Sans': 'General+Sans:wght@300;400;500;600;700;800',
     'Cabinet Grotesk': 'Cabinet+Grotesk:wght@300;400;500;600;700;800;900',
     'Clash Display': 'Clash+Display:wght@400;500;600;700',
@@ -827,7 +936,45 @@
         imageHref = String(ev.target.result);
         document.getElementById('imgPreviewImg').src = imageHref;
         document.getElementById('imgPreview').classList.add('show');
-        paint();
+        
+        // Extract colors from uploaded image and apply them
+        const tempImg = new Image();
+        tempImg.crossOrigin = 'anonymous';
+        tempImg.onload = () => {
+          console.log('🖼️ Manual upload - extracting colors from uploaded image...');
+          extractImageColors(tempImg, (imageColors) => {
+            console.log('🎨 Extracted colors from uploaded image:', imageColors);
+            
+            // Cache the colors for shuffle
+            cachedImageColors = imageColors;
+            lastImageUrl = imageHref;
+            
+            const imageBasedPalette = generateImageBasedPalette(imageColors);
+            if (imageBasedPalette) {
+              console.log('🎯 Generated palette from uploaded image:', imageBasedPalette);
+              const colorScheme = generateUnifiedColorPalette(imageBasedPalette);
+              
+              // Apply colors
+              $bgColor.value = colorScheme.background;
+              $bgHex.value = colorScheme.background;
+              $textColor.value = colorScheme.text;
+              $textHex.value = colorScheme.text;
+              $tagShapeColor.value = colorScheme.tagBackground;
+              $tagShapeHex.value = colorScheme.tagBackground;
+              $tagTextColor.value = colorScheme.tagText;
+              $tagTextHex.value = colorScheme.tagText;
+              
+              console.log('✅ Applied colors from uploaded image and cached for shuffle!');
+            }
+            paint();
+          });
+        };
+        tempImg.onerror = () => {
+          console.log('❌ Failed to extract colors from uploaded image, using current colors');
+          paint();
+        };
+        tempImg.src = imageHref;
+        
       } catch (error) {
         showError('Failed to process image file.');
         e.target.value = '';
@@ -1056,6 +1203,68 @@
         category: 'single-family',
         headerLetterSpacing: '-0.02em',   // Modern tightening
         subLetterSpacing: '0em'
+      },
+      
+      // Premium additions - safe additions to existing system
+      {
+        name: 'Premium Editorial',
+        fontFamily: 'Playfair Display, serif',
+        headerWeight: '700',
+        subWeight: '400',
+        contrast: '3.5:1',
+        category: 'serif-premium',
+        headerLetterSpacing: '-0.015em',  // Refined serif spacing
+        subLetterSpacing: '0em'
+      },
+      {
+        name: 'Government Grade',
+        fontFamily: 'Public Sans, sans-serif',
+        headerWeight: '700',
+        subWeight: '400',
+        contrast: '3.5:1',
+        category: 'institutional',
+        headerLetterSpacing: '-0.02em',   // Clean institutional
+        subLetterSpacing: '0em'
+      },
+      {
+        name: 'Variable Display',
+        fontFamily: 'Fraunces, serif',
+        headerWeight: '600',
+        subWeight: '400',
+        contrast: '3:1',
+        category: 'variable-serif',
+        headerLetterSpacing: '-0.01em',   // Variable font spacing
+        subLetterSpacing: '0em'
+      },
+      
+      // Font Pairings - different fonts for header vs subheader
+      {
+        name: 'Jost × EB Garamond',
+        headerFamily: 'Jost, sans-serif',
+        subFamily: 'EB Garamond, serif', 
+        fontFamily: 'Jost, sans-serif', // fallback
+        headerWeight: '600',
+        subWeight: '400',
+        contrast: '3:1',
+        category: 'font-pairing',
+        headerLetterSpacing: '-0.01em',   // -1% tracking
+        subLetterSpacing: '-0.01em',      // -1% tracking
+        headerLineHeight: '0.9',          // 90% line height
+        subLineHeight: '1.2'              // 120% line height
+      },
+      {
+        name: 'Playfair × Libre Franklin',
+        headerFamily: 'Playfair Display, serif',
+        subFamily: 'Libre Franklin, sans-serif',
+        fontFamily: 'Playfair Display, serif', // fallback
+        headerWeight: '600',
+        subWeight: '400', 
+        contrast: '3:1',
+        category: 'font-pairing',
+        headerLetterSpacing: '-0.01em',   // -1% tracking
+        subLetterSpacing: '-0.01em',      // -1% tracking  
+        headerLineHeight: '1.2',          // 120% line height
+        subLineHeight: '1.4'              // 140% line height
       }
     ];
     
@@ -1301,27 +1510,23 @@
       .map(color => ({ color, luminance: getLuminance(color) }))
       .sort((a, b) => a.luminance - b.luminance);
     
-    // Find suitable background (very light colors)
     const lightColors = colorsByLuminance.filter(c => c.luminance > 0.8);
     const darkColors = colorsByLuminance.filter(c => c.luminance < 0.3);
     const midColors = colorsByLuminance.filter(c => c.luminance >= 0.3 && c.luminance <= 0.8);
     
-    // Create palette structure with more colors for variety
+    // Simple: always create light theme, shuffle will handle swapping
     const palette = {
       name: 'From Image',
       source: 'image',
       backgrounds: lightColors.length > 0 ? lightColors.map(c => c.color) : ['#ffffff', '#f8fafc', '#f1f5f9'],
       accents: darkColors.length > 0 ? darkColors.map(c => c.color) : ['#1a1a1a', '#374151', '#475569'],
       vibrants: [
-        // Use all extracted colors as vibrants for maximum variety
         ...imageColors,
-        // Add some fallbacks in case image has limited colors
         ...(midColors.length > 0 ? midColors.map(c => c.color) : ['#3b82f6', '#8b5cf6', '#f59e0b'])
-      ].slice(0, 6) // Keep up to 6 vibrant colors
+      ].slice(0, 6)
     };
     
-    console.log(`🖼️ Created image palette with ${palette.backgrounds.length} backgrounds, ${palette.accents.length} accents, ${palette.vibrants.length} vibrants`);
-    
+    console.log(`🖼️ Created image palette with ${palette.backgrounds.length} backgrounds, ${palette.accents.length} accents`);
     return palette;
   }
 
@@ -1376,6 +1581,55 @@
         backgrounds: ['#fffbf7', '#fff7ed', '#fef2f2'],
         accents: ['#9a3412', '#c2410c', '#dc2626'],
         vibrants: ['#ea580c', '#f97316', '#fb923c']
+      },
+      // Dark Elegance (sophisticated dark theme)
+      { 
+        name: 'Dark Elegance',
+        backgrounds: ['#0f172a', '#1e293b', '#334155'],
+        accents: ['#f8fafc', '#e2e8f0', '#cbd5e1'],
+        vibrants: ['#3b82f6', '#8b5cf6', '#06b6d4']
+      },
+      // Midnight Ocean (deep blue dark theme)
+      { 
+        name: 'Midnight Ocean',
+        backgrounds: ['#0c1821', '#1e3a3a', '#164e63'],
+        accents: ['#f0f9ff', '#e0f2fe', '#bae6fd'],
+        vibrants: ['#0ea5e9', '#38bdf8', '#06b6d4']
+      },
+      // Forest Night (dark green theme)
+      { 
+        name: 'Forest Night',
+        backgrounds: ['#0f1a0f', '#1a2e1a', '#14532d'],
+        accents: ['#f0fdf4', '#dcfce7', '#bbf7d0'],
+        vibrants: ['#22c55e', '#16a34a', '#15803d']
+      },
+      // Purple Haze (dark purple theme)
+      { 
+        name: 'Purple Haze',
+        backgrounds: ['#1e1b3a', '#2e1065', '#581c87'],
+        accents: ['#faf5ff', '#f3e8ff', '#e9d5ff'],
+        vibrants: ['#a855f7', '#8b5cf6', '#7c3aed']
+      },
+      // Carbon Fiber (neutral dark theme)
+      { 
+        name: 'Carbon Fiber',
+        backgrounds: ['#111827', '#1f2937', '#374151'],
+        accents: ['#f9fafb', '#f3f4f6', '#e5e7eb'],
+        vibrants: ['#6b7280', '#9ca3af', '#d1d5db']
+      },
+      // Amber Night (warm dark theme)
+      { 
+        name: 'Amber Night',
+        backgrounds: ['#1c1917', '#292524', '#44403c'],
+        accents: ['#fef7f0', '#fed7aa', '#fdba74'],
+        vibrants: ['#f59e0b', '#d97706', '#ea580c']
+      },
+      // Rose Gold Dark (romantic dark theme)
+      { 
+        name: 'Rose Gold Dark',
+        backgrounds: ['#1f1719', '#2d1b20', '#3f2937'],
+        accents: ['#fdf2f8', '#fce7f3', '#f3e8ff'],
+        vibrants: ['#ec4899', '#f472b6', '#fb7299']
       }
     ];
       
@@ -1385,35 +1639,69 @@
     
     console.log(`🎯 Selected palette: ${palette.name}`);
     
+    console.log('🔥🔥🔥 About to call createUnifiedScheme() with palette:', palette);
     // Create a unified color scheme from this single palette
-    return createUnifiedScheme(palette);
+    const result = createUnifiedScheme(palette);
+    console.log('🔥🔥🔥 createUnifiedScheme() returned:', result);
+    return result;
   }
   
   function createUnifiedScheme(palette) {
+    console.warn('🔥🔥🔥 ENTERING createUnifiedScheme() - swap logic should execute!', palette);
+    
     // Randomly select base colors from the palette  
     const background = palette.backgrounds[Math.floor(Math.random() * palette.backgrounds.length)];
     const textColor = palette.accents[Math.floor(Math.random() * palette.accents.length)];
     const accent1 = palette.vibrants[Math.floor(Math.random() * palette.vibrants.length)];
     const accent2 = palette.vibrants[Math.floor(Math.random() * palette.vibrants.length)];
     
-    // Ensure text contrast
-    let finalTextColor = textColor;
-    if (getContrastRatio(finalTextColor, background) < 4.5) {
-      finalTextColor = getLuminance(background) > 0.5 ? '#0f172a' : '#ffffff';
+    console.warn('🔥🔥🔥 About to execute swap logic!');
+    // 30% chance to swap colors for dark theme - SIMPLE!
+    const shouldSwapColors = Math.random() < 0.3;
+    let finalBackground, finalTextColor;
+    
+    console.log(`🎲 Swap chance: ${shouldSwapColors ? 'YES' : 'NO'} (${shouldSwapColors ? 'DARK THEME' : 'LIGHT THEME'})`);
+    console.log(`📊 Available colors - Background: ${background}, TextColor: ${textColor}`);
+    
+    if (shouldSwapColors) {
+      // Force truly dark background and light text
+      finalBackground = '#1a1a1a'; // Force dark background
+      finalTextColor = '#ffffff';  // Force white text
+      console.log('🌙 FORCED dark theme! Background: #1a1a1a, Text: #ffffff');
+    } else {
+      // Normal: light background, dark text  
+      finalBackground = background;
+      finalTextColor = textColor;
+      console.log('☀️ Normal light theme');
     }
     
-    // Tag gets a different vibrant color for visual interest, but text uses background for contrast
-    let tagBackground = accent1;
-    let tagText = background;
+    // Ensure text contrast
+    if (getContrastRatio(finalTextColor, finalBackground) < 4.5) {
+      finalTextColor = getLuminance(finalBackground) > 0.5 ? '#0f172a' : '#ffffff';
+    }
     
-    // Verify tag contrast and fix if needed
+    // Tag gets a different vibrant color for visual interest with guaranteed contrast
+    let tagBackground = accent1;
+    let tagText = finalTextColor; // Start with layout text color as base
+    
+    // Ensure tag background is different enough from layout background
+    if (getContrastRatio(tagBackground, finalBackground) < 2.0) {
+      // If tag background too similar to layout background, use accent2 or vibrant color
+      tagBackground = accent2;
+      if (getContrastRatio(tagBackground, finalBackground) < 2.0) {
+        // Last resort: force a contrasting color
+        tagBackground = getLuminance(finalBackground) > 0.5 ? '#1a1a1a' : '#ffffff';
+      }
+    }
+    
+    // Ensure tag text has good contrast with tag background  
     if (getContrastRatio(tagText, tagBackground) < 4.5) {
       tagText = getLuminance(tagBackground) > 0.5 ? '#000000' : '#ffffff';
     }
     
     const scheme = {
       // Layout colors
-      background: background,
+      background: finalBackground, // Use swapped colors
       text: finalTextColor,
       
       // Tag colors (can be different from text for visual variety)
@@ -1443,6 +1731,13 @@
   function randomizeLayout() {
     console.log('🚀 RANDOMIZE BUTTON CLICKED - STARTING FULL DEBUG TRACE');
     console.log('🔍 Step 1: Function entry confirmed');
+    console.log('🔥🔥🔥 RANDOMIZE LAYOUT FUNCTION CALLED - SHOULD REACH COLOR SECTION!');
+    
+    // Hide canvas during randomization to prevent showing partial updates
+    const canvas = document.getElementById('canvas');
+    if (canvas) {
+      canvas.style.opacity = '0.3';
+    }
     
     // Clear layout cache to ensure fresh calculations with new parameters
     layoutCache.clear();
@@ -1499,26 +1794,40 @@
     console.log('📝 Applying professional typography rules...');
     const typographySystem = generateProfessionalTypography();
     
-    // Apply font family
-    $ff.value = typographySystem.fontFamily;
+    // Apply font family (with font pairing support)
+    if (typographySystem.category === 'font-pairing') {
+      // For font pairings, we'll use the header font as primary
+      $ff.value = typographySystem.headerFamily;
+      console.log(`🎨 Font pairing detected: Header=${typographySystem.headerFamily}, Sub=${typographySystem.subFamily}`);
+    } else {
+      $ff.value = typographySystem.fontFamily;
+    }
     
     // Apply weights with proper hierarchy (3:1 minimum contrast ratio)
     $hw.value = typographySystem.headerWeight;
     $sw.value = typographySystem.subWeight;
     
     console.log(`📝 Typography applied: ${typographySystem.name}`, {
-      font: typographySystem.fontFamily,
+      headerFont: typographySystem.headerFamily || typographySystem.fontFamily,
+      subFont: typographySystem.subFamily || typographySystem.fontFamily,
       headerWeight: typographySystem.headerWeight,
       subWeight: typographySystem.subWeight,
       headerLetterSpacing: typographySystem.headerLetterSpacing,
       subLetterSpacing: typographySystem.subLetterSpacing,
+      headerLineHeight: typographySystem.headerLineHeight || '1.2',
+      subLineHeight: typographySystem.subLineHeight || '1.44',
       contrast: typographySystem.contrast
     });
     
     // Store typography for paint function to use
     window.currentTypography = {
       headerLetterSpacing: typographySystem.headerLetterSpacing,
-      subLetterSpacing: typographySystem.subLetterSpacing
+      subLetterSpacing: typographySystem.subLetterSpacing,
+      headerLineHeight: typographySystem.headerLineHeight || '1.2',
+      subLineHeight: typographySystem.subLineHeight || '1.44',
+      headerFamily: typographySystem.headerFamily || typographySystem.fontFamily,
+      subFamily: typographySystem.subFamily || typographySystem.fontFamily,
+      category: typographySystem.category
     };
 
     // Professional padding based on typography rules (1.5x-2x type size for breathing)
@@ -1535,46 +1844,29 @@
     });
 
     console.log('🔍 Step 2: Reached color randomization section');
+    console.log('🔥🔥🔥 REACHED COLOR SECTION - THIS IS WHERE COLORS SHOULD CHANGE!');
     // Always apply unified color palette for all elements
     console.log('🎨 Generating unified color palette for all elements...');
-      // Try to extract colors from current image
+      // Use cached colors if we have an uploaded image, otherwise use predefined palettes
       const tryImageBasedColors = () => {
-        // Try multiple selectors to find the image
-        const imageElement = document.querySelector('image') || 
-                           document.querySelector('.layout-container image') ||
-                           document.querySelector('svg image');
+        console.log('🔥 SHUFFLE: tryImageBasedColors called!');
+        console.log('🔥 imageHref:', imageHref ? 'EXISTS' : 'MISSING');
+        console.log('🔥 cachedImageColors:', cachedImageColors ? `${cachedImageColors.length} colors` : 'MISSING');
         
-        console.log('🔍 Step 3: Looking for image element:', imageElement);
-        
-        if (imageElement && imageElement.href && imageElement.href.baseVal) {
-          console.log('📸 Found image - image colors take priority, shuffling image-based palette');
-          // Create temporary img element to extract colors
-          const tempImg = new Image();
-          tempImg.crossOrigin = 'anonymous';
-          tempImg.onload = () => {
-            console.log('✅ Image loaded, extracting colors...');
-            extractImageColors(tempImg, (imageColors) => {
-              console.log('🎨 Extracted image colors:', imageColors);
-              const imageBasedPalette = generateImageBasedPalette(imageColors);
-              if (imageBasedPalette) {
-                console.log('🎯 Generated image-based palette:', imageBasedPalette);
-              }
-              const colorScheme = generateUnifiedColorPalette(imageBasedPalette);
-              applyColorScheme(colorScheme);
-            });
-          };
-          tempImg.onerror = (e) => {
-            console.log('❌ Failed to load image:', e);
-            // Fallback to predefined palettes
-            const colorScheme = generateUnifiedColorPalette();
-            applyColorScheme(colorScheme);
-          };
-          tempImg.src = imageElement.href.baseVal;
+        if (imageHref && cachedImageColors && cachedImageColors.length > 0) {
+          console.log('🎨 Using cached image colors for shuffle:', cachedImageColors);
+          const imageBasedPalette = generateImageBasedPalette(cachedImageColors);
+          if (imageBasedPalette) {
+            console.log('🎯 Generated image-based palette from cache:', imageBasedPalette);
+          }
+          const colorScheme = generateUnifiedColorPalette(imageBasedPalette);
+          console.log('🔥 About to apply color scheme with swap logic:', colorScheme);
+          applyColorScheme(colorScheme);
         } else {
-          console.log('🔍 Step 4: No image found, generating new unified predefined palette');
-          // No image found, use predefined unified palettes
+          console.log('🔍 No cached image colors, using predefined palettes');
+          // No image colors, use predefined unified palettes with swap chance
           const colorScheme = generateUnifiedColorPalette();
-          console.log('🔍 Step 5: Generated color scheme:', colorScheme);
+          console.log('🔍 Generated predefined color scheme:', colorScheme);
           applyColorScheme(colorScheme);
         }
       };
@@ -1621,20 +1913,12 @@
           }
         });
         
-        console.log('🔍 Step 12: Scheduling repaint');
-        // Force immediate repaint
-        setTimeout(() => {
-          if (window.paint) {
-            console.log('🔍 Step 13: Calling paint()');
-            window.paint();
-            console.log('✅ PAINT COMPLETED - unified colors should now be visible');
-          } else {
-            console.error('❌ window.paint function not found!');
-          }
-        }, 50);
+        console.log('🔍 Step 12: Color scheme applied, skipping intermediate repaint');
+        // Skip intermediate repaint - final paint() will be called at end of randomizeLayout()
       };
       
     console.log('🔍 Step 14: Calling tryImageBasedColors()');
+    console.log('🔥 ABOUT TO CALL tryImageBasedColors() - this should trigger color randomization!');
     tryImageBasedColors();
 
     console.log('🔍 Step 15: Setting randomization mode');
@@ -1642,20 +1926,37 @@
     // This allows 'left', 'side', 'top' patterns to work properly
     isRandomMode = false;
 
+    // Determine center alignment for vertical formats (33% chance)
+    const currentWidth = Math.max(320, parseInt($w.value||'1200',10));
+    const currentHeight = Math.max(320, parseInt($h.value||'675',10));
+    const isVertical = currentHeight > currentWidth;
+    const shouldCenterAlign = isVertical && Math.random() < 0.33;
+    
+    // Store center alignment preference for paint function
+    window.currentCenterAlign = shouldCenterAlign;
+
     // Apply font loading if needed
     const selectedOption = $ff.options[$ff.selectedIndex];
     const fontName = selectedOption ? selectedOption.textContent : 'Inter';
-    loadGoogleFont(fontName).then(() => {
+    const finalizeLayout = () => {
+      // Restore canvas visibility and show final result
+      const canvas = document.getElementById('canvas');
+      if (canvas) {
+        canvas.style.opacity = '1';
+      }
+      
       canvasCache.clear();
       paint();
-    }).catch(() => {
-      console.log('🔍 Step 17: Calling final paint()');
-      paint();
-    });
+      console.log('✅ RANDOMIZATION FUNCTION COMPLETED!');
+    };
     
-    console.log('🔍 Step 18: Function about to end - calling paint() to ensure update');
-    paint(); // Ensure layout always updates immediately
-    console.log('✅ RANDOMIZATION FUNCTION COMPLETED!');
+    loadGoogleFont(fontName).then(() => {
+      console.log('🔍 Step 17: Font loaded, finalizing layout');
+      finalizeLayout();
+    }).catch(() => {
+      console.log('🔍 Step 17: Font load failed, finalizing layout anyway');
+      finalizeLayout();
+    });
   }
 
   // Debug: Check if button exists
@@ -1716,7 +2017,9 @@
         paddingV: parseInt($paddingV.value||'24',10),
         // Add typography parameters from randomization
         headerLetterSpacing: window.currentTypography?.headerLetterSpacing || '0',
-        subLetterSpacing: window.currentTypography?.subLetterSpacing || '0'
+        subLetterSpacing: window.currentTypography?.subLetterSpacing || '0',
+        // Add center alignment parameter
+        centerAlign: window.currentCenterAlign || false
       };
       
       console.log('  - tagTextColor:', renderParams.tagTextColor);
@@ -1867,7 +2170,12 @@
       return;
     }
 
-    $generateAI.disabled = true;
+    // Start emotional loading
+    if (window.startEmotionalLoading) {
+      window.startEmotionalLoading();
+    } else {
+      $generateAI.disabled = true;
+    }
     
     try {
       // Step 1: Generate text content using serverless function
@@ -1903,6 +2211,9 @@
       // Step 2: Generate image using serverless function
       showAIStatus('Step 2: Generating image...', 'loading');
       
+      const styleId = $recraftStyleId.value.trim() || getRandomStyleId();
+      console.log('🎨 Using Recraft style ID:', styleId);
+      
       const imageResponse = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
@@ -1910,7 +2221,7 @@
         },
         body: JSON.stringify({ 
           imagePrompt: textData.result.imagePrompt,
-          styleId: $recraftStyleId.value.trim() || null
+          styleId: styleId
         })
       });
 
@@ -1930,35 +2241,71 @@
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = function() {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            imageHref = canvas.toDataURL();
-          } catch (e) {
-            // If canvas fails, use direct URL
-            imageHref = imageData.imageUrl;
-          }
+          console.log('🖼️ Image loaded, extracting colors automatically...');
           
-          // Determine success message based on what was actually generated
-          let statusMsg = '✓ Layout generated!';
-          if (textData.demo && imageData.demo) {
-            statusMsg = '✓ Demo layout generated!';
-          } else if (textData.demo) {
-            statusMsg = '✓ Layout with AI image generated!';
-          } else if (imageData.demo || imageData.fallback) {
-            statusMsg = '✓ Layout with AI text generated!';
-          } else {
-            statusMsg = '✓ Full AI layout generated!';
-          }
-          
-          showAIStatus(statusMsg, 'success');
-          setTimeout(hideAIStatus, 3000);
-          
-          // Trigger layout update
-          paint();
+          // First extract colors from the image
+          extractImageColors(img, (extractedColors) => {
+            if (extractedColors && extractedColors.length > 0) {
+              console.log('🎨 Extracted colors from AI image:', extractedColors);
+              
+              // Cache the colors for future shuffles
+              cachedImageColors = extractedColors;
+              lastImageUrl = imageData.imageUrl;
+              
+              // Generate unified color palette from extracted colors  
+              const imageBasedPalette = generateImageBasedPalette(extractedColors);
+              const unifiedScheme = generateUnifiedColorPalette(imageBasedPalette);
+              
+              console.log('🎯 Applying unified color scheme:', unifiedScheme);
+              
+              // Apply the extracted colors to the layout
+              $bgColor.value = unifiedScheme.background;
+              $bgHex.value = unifiedScheme.background;
+              $textColor.value = unifiedScheme.text;
+              $textHex.value = unifiedScheme.text;
+              $tagShapeColor.value = unifiedScheme.tagBackground;
+              $tagShapeHex.value = unifiedScheme.tagBackground;
+              $tagTextColor.value = unifiedScheme.tagText;
+              $tagTextHex.value = unifiedScheme.tagText;
+              
+              // Trigger change events to update color pickers
+              [$bgColor, $textColor, $tagShapeColor, $tagTextColor].forEach(input => {
+                input.dispatchEvent(new Event('input'));
+                input.dispatchEvent(new Event('change'));
+              });
+            }
+            
+            // Now set the image after colors are applied
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              imageHref = canvas.toDataURL();
+            } catch (e) {
+              // If canvas fails, use direct URL
+              imageHref = imageData.imageUrl;
+            }
+            
+            // Determine success message based on what was actually generated
+            let statusMsg = '✓ Layout generated with colors!';
+            if (textData.demo && imageData.demo) {
+              statusMsg = '✓ Demo layout generated!';
+            } else if (textData.demo) {
+              statusMsg = '✓ Layout with AI image & colors generated!';
+            } else if (imageData.demo || imageData.fallback) {
+              statusMsg = '✓ Layout with AI text generated!';
+            } else {
+              statusMsg = '✓ Full AI layout with colors generated!';
+            }
+            
+            showAIStatus(statusMsg, 'success');
+            setTimeout(hideAIStatus, 3000);
+            
+            // Trigger layout update with both image and colors
+            paint();
+          });
         };
         img.onerror = function() {
           imageHref = imageData.imageUrl;
@@ -1979,7 +2326,12 @@
       showAIStatus(`Error: ${error.message}`, 'error');
       setTimeout(hideAIStatus, 5000);
     } finally {
-      $generateAI.disabled = false;
+      // Stop emotional loading
+      if (window.stopEmotionalLoading) {
+        window.stopEmotionalLoading();
+      } else {
+        $generateAI.disabled = false;
+      }
     }
   }
 
