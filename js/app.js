@@ -39,6 +39,10 @@
 
   // Canvas context cache to prevent memory leaks
   const canvasCache = new Map();
+  // Text measurement cache to avoid repeated expensive calculations
+  const textMeasureCache = new Map();
+  // Layout calculation cache for identical inputs
+  const layoutCache = new Map();
   
   // Debounce utility for performance
   function debounce(func, wait) {
@@ -62,8 +66,20 @@
     }
     const ctx = canvasCache.get(key);
     return (fs, t) => {
+      // Create cache key for this specific measurement
+      const measureKey = `${key}:${fs}:${t}`;
+      if (textMeasureCache.has(measureKey)) {
+        return textMeasureCache.get(measureKey);
+      }
+      
       ctx.font = String(weight) + ' ' + fs + 'px ' + fontFamily;
-      return ctx.measureText(t).width;
+      const width = ctx.measureText(t).width;
+      
+      // Cache the result (with size limit to prevent memory leaks)
+      if (textMeasureCache.size < 1000) {
+        textMeasureCache.set(measureKey, width);
+      }
+      return width;
     };
   }
   function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -91,16 +107,28 @@
 
   function choosePattern(auto, aspect, hasImage){
     if(!hasImage) return 'none';
-    if(auto!=='auto') return auto;
+    if(auto!=='auto') return auto; // This preserves 'left', 'side', 'top' selections
     return aspect>=1.3 ? 'side' : 'top';
   }
 
-  function fitLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV}){
+  function fitLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing}){
+    // Create cache key for layout (excluding colors since they don't affect layout)
+    const layoutKey = `${W}:${H}:${header}:${subheader}:${fontFamily}:${headerWeight}:${subWeight}:${patternChoice}:${imageRounded}:${imagePadding}:${logoPos}:${logoSize}:${tagPos}:${tagSize}:${paddingH}:${paddingV}`;
+    
+    if (layoutCache.has(layoutKey)) {
+      const cached = layoutCache.get(layoutKey);
+      // Return cached result with updated colors
+      return { ...cached, tagTextColor, tagShapeColor, textColor, bgColor };
+    }
+    
     const minDim=Math.min(W,H);
     const mH=createMeasure(fontFamily, headerWeight);
     const mS=createMeasure(fontFamily, subWeight);
 
-    const padding = paddingH || round8(clamp(24, minDim*0.10, 120));
+    // Force generous minimum padding - ALWAYS at least 48px regardless of UI input
+    const minRequiredPadding = 48;
+    const calculatedPadding = paddingH || round8(clamp(minRequiredPadding, minDim*0.10, 120));
+    const padding = Math.max(minRequiredPadding, calculatedPadding);
     const ratio = LAYOUT_CONSTANTS.HEADER_TO_SUB_RATIO;
     const lhH = LAYOUT_CONSTANTS.HEADER_LINE_HEIGHT;
     const lhS = LAYOUT_CONSTANTS.SUB_LINE_HEIGHT;
@@ -113,6 +141,7 @@
     const aspect=W/H;
     const hasImage=!!imageHref;
     let pat=choosePattern(patternChoice, aspect, hasImage);
+    console.log('🎯 fitLayout called with patternChoice:', patternChoice, ', final pattern:', pat, ', hasImage:', hasImage);
 
     let sideFrac = LAYOUT_CONSTANTS.SIDE_FRACTION;
     let topFracShort = LAYOUT_CONSTANTS.TOP_FRACTION_SHORT;
@@ -134,7 +163,13 @@
 
     function attempt(pad, sideF, topF){
       const cw = W - 2*pad, ch = H - 2*pad;
-      let lo=hdrMin, hi=hdrMax, best=null;
+      
+      // Optimize binary search range based on container size
+      const estimatedOptimal = Math.floor(minDim * 0.08);
+      let lo = Math.max(hdrMin, estimatedOptimal - 20); // Start closer to likely result
+      let hi = Math.min(hdrMax, estimatedOptimal + 30); // Smaller search range
+      let best=null;
+      
       while(lo<=hi){
         const mid=Math.floor((lo+hi)/2);
         const Hs=mid, Ss=Math.max(subMin, Math.floor(Hs/ratio));
@@ -151,6 +186,11 @@
             const iw = Math.floor(cw * sideF);
             imgBox = { x: 0, y: 0, w: iw, h: th, mode:'side' };
             tw = cw - iw - imgTextGapPx;
+          } else if (pat==='left') {
+            const iw = Math.floor(cw * sideF);
+            imgBox = { x: 0, y: 0, w: iw, h: th, mode:'left' };
+            tw = cw - iw - imgTextGapPx;
+            console.log('🔥 LEFT pattern detected! Image width:', iw, ', text width:', tw, ', hasImage:', hasImage, ', imageHref:', !!imageHref);
           } else if (pat==='top') {
             const isLong = (subheader||'').length > 80 || header.length > 60;
             const ih = Math.floor(th * (isLong ? topFracLong : topF));
@@ -208,20 +248,43 @@
 
     let imgBox=null;
     if (fit.imgBox) {
-      if (fit.imgBox.mode==='side') {
-        imgBox = { x: baseX + (fit.cw - fit.imgBox.w), y: baseY, w: fit.imgBox.w, h: fit.ch };
-      } else if (fit.imgBox.mode==='top') {
-        imgBox = { x: baseX, y: baseY, w: fit.cw, h: fit.imgBox.h };
+      if (imagePadding === 'fill') {
+        // Fill to edges - ignore padding for image positioning
+        if (fit.imgBox.mode==='side') {
+          imgBox = { x: W - fit.imgBox.w, y: 0, w: fit.imgBox.w, h: H };
+        } else if (fit.imgBox.mode==='left') {
+          imgBox = { x: 0, y: 0, w: fit.imgBox.w, h: H };
+        } else if (fit.imgBox.mode==='top') {
+          imgBox = { x: 0, y: 0, w: W, h: fit.imgBox.h };
+        }
+      } else {
+        // Respect layout padding (default behavior)
+        if (fit.imgBox.mode==='side') {
+          imgBox = { x: baseX + (fit.cw - fit.imgBox.w), y: baseY, w: fit.imgBox.w, h: fit.ch };
+        } else if (fit.imgBox.mode==='left') {
+          imgBox = { x: baseX, y: baseY, w: fit.imgBox.w, h: fit.ch };
+        } else if (fit.imgBox.mode==='top') {
+          imgBox = { x: baseX, y: baseY, w: fit.cw, h: fit.imgBox.h };
+        }
       }
     }
 
-    const headBox = { x: baseX, y: baseY + fit.headYoffset, w: fit.tw, h: fit.headH };
+    // Adjust text position based on image layout
+    let textX = baseX;
+    if (fit.imgBox && fit.imgBox.mode === 'left') {
+      textX = baseX + fit.imgBox.w + fit.imgTextGapPx;
+      console.log('LEFT positioning: image at x=0, text at x=', textX);
+    } else if (fit.imgBox && fit.imgBox.mode === 'side') {
+      console.log('SIDE positioning: text at x=', textX, ', image will be at right');
+    }
+    
+    const headBox = { x: textX, y: baseY + fit.headYoffset, w: fit.tw, h: fit.headH };
     const subBox  = { x: headBox.x, y: Math.round(headBox.y + fit.headH + fit.gap), w: fit.tw, h: fit.subH };
 
     let logoBox=null;
     if (hasLogo) {
       // Position logo in text column area, not full content area
-      const logoX = headBox.x; // Use text column x position
+      const logoX = textX; // Use text column x position
       if (logoPosTop) logoBox = { x: logoX, y: baseY + (fit.imgBox && fit.imgBox.mode==='top' ? fit.imgBox.h + fit.imgTextGapPx : 0), w: fit.logoH, h: fit.logoH };
       else logoBox = { x: logoX, y: H - pad - fit.logoH, w: fit.logoH, h: fit.logoH };
     }
@@ -229,7 +292,7 @@
     let tagBox=null;
     if (hasTag) {
       // Position tag in text column area, accounting for logo position
-      const tagX = headBox.x;
+      const tagX = textX;
       if (tagPosAbove) {
         let tagY = baseY + (fit.imgBox && fit.imgBox.mode==='top' ? fit.imgBox.h + fit.imgTextGapPx : 0);
         if (hasLogo && logoPosTop) {
@@ -245,9 +308,18 @@
       }
     }
 
-    return { padding: fit.padding, headerSize: fit.Hs, subSize: fit.Ss, gap: fit.gap, imgTextGap: fit.imgTextGapPx,
+    console.log('📐 fitLayout result:', { pattern: pat, hasImgBox: !!imgBox, imgBox, hasImage, imageHref: !!imageHref });
+    const result = { padding: fit.padding, headerSize: fit.Hs, subSize: fit.Ss, gap: fit.gap, imgTextGap: fit.imgTextGapPx,
              headLines: fit.headLines, subLines: fit.subLines, headBox, subBox, imgBox, pattern: pat, logoBox, tagBox,
-             imageRounded, tagText, tagTextColor, tagShapeColor, textColor, bgColor };
+             imageRounded, tagText, tagTextColor, tagShapeColor, textColor, bgColor, 
+             headerLetterSpacing, subLetterSpacing };
+    
+    // Cache result (with size limit to prevent memory leaks)
+    if (layoutCache.size < 50) {
+      layoutCache.set(layoutKey, result);
+    }
+    
+    return result;
   }
 
   // Golden ratio and simple grid layouts
@@ -306,13 +378,16 @@
     return GRID_LAYOUTS[Math.floor(Math.random() * GRID_LAYOUTS.length)];
   }
 
-  function fitRandomLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV}) {
+  function fitRandomLayout({W,H,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,imagePadding,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing}) {
     const gridLayout = getRandomGridLayout();
     const minDim = Math.min(W, H);
     const mH = createMeasure(fontFamily, headerWeight);
     const mS = createMeasure(fontFamily, subWeight);
     
-    const padding = paddingH || round8(clamp(20, minDim * 0.06, 60));
+    // Force generous minimum padding for random layouts - ALWAYS at least 40px regardless of UI input
+    const minRequiredPadding = 40;
+    const calculatedPadding = paddingH || round8(clamp(minRequiredPadding, minDim * 0.08, 100));
+    const padding = Math.max(minRequiredPadding, calculatedPadding);
     
     const contentWidth = W - 2 * padding;
     const contentHeight = H - 2 * padding;
@@ -397,7 +472,13 @@
       switch (cell.element) {
         case 'image':
           if (imageHref) {
-            imgBox = { x: innerX, y: innerY, w: innerW, h: innerH };
+            if (imagePadding === 'fill') {
+              // Fill to edges - use full cell dimensions
+              imgBox = { x: cellX, y: cellY, w: cellW, h: cellH };
+            } else {
+              // Respect layout padding
+              imgBox = { x: innerX, y: innerY, w: innerW, h: innerH };
+            }
           }
           break;
           
@@ -448,21 +529,39 @@
       subLines: subBox ? wrapNoBreak(mS, subSize, subheader, subBox.w).lines : [], 
       headBox, subBox, imgBox, 
       pattern: imageHref ? 'grid' : 'none', 
-      logoBox, tagBox, imageRounded, tagText, tagTextColor, tagShapeColor, textColor, bgColor, 
+      logoBox, tagBox, imageRounded, tagText, tagTextColor, tagShapeColor, textColor, bgColor,
+      headerLetterSpacing, subLetterSpacing,
       randomLayout: gridLayout.name 
     };
   }
 
   function renderSVG(opts){
-    const {width,height,header,subheader,headerWeight,subWeight,fontFamily,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV} = opts;
+    const {width,height,header,subheader,headerWeight,subWeight,fontFamily,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing} = opts;
     const m = isRandomMode ? 
-      fitRandomLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV}) :
-      fitLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV});
+      fitRandomLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,imageRounded,imagePadding,logoHref,logoSize,tagText,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing}) :
+      fitLayout({W:width,H:height,header,subheader,fontFamily,headerWeight,subWeight,imageHref,patternChoice,imageRounded,imagePadding,logoHref,logoPos,logoSize,tagText,tagPos,tagSize,tagTextColor,tagShapeColor,textColor,bgColor,paddingH,paddingV,headerLetterSpacing,subLetterSpacing});
     const parts = [`<?xml version="1.0" encoding="UTF-8"?>`,
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
       `<rect width="100%" height="100%" fill="${esc(m.bgColor)}"/>`];
+    console.log('🖼️ Image rendering check:', { hasImgBox: !!m.imgBox, imgBox: m.imgBox, hasImageHref: !!imageHref, pattern: m.pattern });
     if (m.imgBox && m.imgBox.w>0 && m.imgBox.h>0 && imageHref) {
-      parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice"/>`);
+      console.log('✅ Rendering image with box:', m.imgBox);
+      if (imageRounded) {
+        // Add rounded corners using clipPath
+        const radius = Math.min(m.imgBox.w, m.imgBox.h) * 0.1; // 10% radius
+        const clipId = `imgClip_${Date.now()}`;
+        parts.push(`<defs><clipPath id="${clipId}"><rect x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" rx="${radius}" ry="${radius}"/></clipPath></defs>`);
+        parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`);
+      } else {
+        parts.push(`<image href="${esc(imageHref)}" x="${m.imgBox.x}" y="${m.imgBox.y}" width="${m.imgBox.w}" height="${m.imgBox.h}" preserveAspectRatio="xMidYMid slice"/>`);
+      }
+    } else {
+      console.log('❌ Image NOT rendered. Reasons:', { 
+        noImgBox: !m.imgBox, 
+        zeroWidth: m.imgBox && m.imgBox.w <= 0, 
+        zeroHeight: m.imgBox && m.imgBox.h <= 0, 
+        noImageHref: !imageHref 
+      });
     }
     if (m.logoBox && logoHref) {
       parts.push(`<image href="${esc(logoHref)}" x="${m.logoBox.x}" y="${m.logoBox.y}" width="${m.logoBox.w}" height="${m.logoBox.h}" preserveAspectRatio="xMidYMid meet"/>`);
@@ -484,16 +583,17 @@
       
       // Tag text - centered in container
       const tagY = m.tagBox.y + m.tagBox.h * 0.5 + tagTextSize * 0.35;
-      parts.push(`<text x="${m.tagBox.x + tagPaddingX}" y="${tagY}" font-family="${fontFamily}" font-size="${tagTextSize}" font-weight="500" fill="${esc(m.tagTextColor)}">${esc(m.tagText.trim())}</text>`);
+      const tagLetterSpacing = m.subLetterSpacing || '0'; // Tags use sub letter-spacing since they're smaller text
+      parts.push(`<text x="${m.tagBox.x + tagPaddingX}" y="${tagY}" font-family="${fontFamily}" font-size="${tagTextSize}" font-weight="500" fill="${esc(m.tagTextColor)}" letter-spacing="${tagLetterSpacing}">${esc(m.tagText.trim())}</text>`);
     }
     const txt = esc(textColor);
     m.headLines.forEach((ln,i)=>{
       const y = m.headBox.y + (i+1)*m.headerSize*1.20 - m.headerSize*0.20;
-      parts.push(`<text x="${m.headBox.x}" y="${y}" font-family="${fontFamily}" font-size="${m.headerSize}" font-weight="${headerWeight}" fill="${txt}">${esc(ln)}</text>`);
+      parts.push(`<text x="${m.headBox.x}" y="${y}" font-family="${fontFamily}" font-size="${m.headerSize}" font-weight="${headerWeight}" letter-spacing="${m.headerLetterSpacing || '0'}" fill="${txt}">${esc(ln)}</text>`);
     });
     m.subLines.forEach((ln,i)=>{
       const y = m.subBox.y + (i+1)*m.subSize*1.44 - m.subSize*0.44;
-      parts.push(`<text x="${m.subBox.x}" y="${y}" font-family="${fontFamily}" font-size="${m.subSize}" font-weight="${subWeight}" fill="${txt}">${esc(ln)}</text>`);
+      parts.push(`<text x="${m.subBox.x}" y="${y}" font-family="${fontFamily}" font-size="${m.subSize}" font-weight="${subWeight}" letter-spacing="${m.subLetterSpacing || '0'}" fill="${txt}">${esc(ln)}</text>`);
     });
     parts.push(`</svg>`);
     return {svg: parts.join("\n"), meta: m};
@@ -503,17 +603,32 @@
   const $w=q('w'), $h=q('h'), $header=q('header'), $sub=q('subheader'),
         $hw=q('headerWeight'), $sw=q('subWeight'), $ff=q('fontFamily'),
         $wrap=q('wrap'), $err=q('err'),
-        $imgFile=q('imgFile'), $clearImg=q('clearImg'), $pattern=q('pattern'), $imageRounded=q('imageRounded'),
+        $imgFile=q('imgFile'), $clearImg=q('clearImg'), $pattern=q('pattern'), $imageRounded=q('imageRounded'), $imagePadding=q('imagePadding'),
         $logoFile=q('logoFile'), $clearLogo=q('clearLogo'), $logoPos=q('logoPos'), $logoSize=q('logoSize'),
         $tagText=q('tagText'), $tagPos=q('tagPos'), $tagSize=q('tagSize'),
         $tagTextColor=q('tagTextColor'), $tagTextHex=q('tagTextHex'), $tagShapeColor=q('tagShapeColor'), $tagShapeHex=q('tagShapeHex'),
         $paddingH=q('paddingH'), $paddingV=q('paddingV'), $recraftStyleId=q('recraftStyleId'),
         $bgColor=q('bgColor'), $bgHex=q('bgHex'), $textColor=q('textColor'), $textHex=q('textHex'),
-        $viewport=q('viewport'), $downloadJpg=q('downloadJpg'), $sizePreset=q('sizePreset'), $customSizeInputs=q('customSizeInputs');
+        $viewport=q('viewport'), $downloadJpg=q('downloadJpg'), $sizePreset=q('sizePreset'), $customSizeInputs=q('customSizeInputs'),
+        $randomizeLayout=q('randomizeLayout');
 
   let imageHref = '', logoHref = '';
   let currentSvg = '', currentWidth = 1200, currentHeight = 675;
   let isRandomMode = false;
+  
+  // Expose functions globally for the randomization button
+  window.enableRandomGrids = () => {
+    isRandomMode = true;
+    console.log('✅ Random grid mode enabled - left/bottom positioning available');
+  };
+  
+  window.disableRandomGrids = () => {
+    isRandomMode = false;
+    console.log('📐 Standard layout mode enabled');
+  };
+  
+  // Expose paint function globally
+  window.paint = null; // Will be set later
 
   // Google Fonts management - Modern designer favorites
   const googleFonts = {
@@ -779,6 +894,7 @@
         imageHref: imageHref,
         patternChoice: $pattern.value,
         imageRounded: $imageRounded.checked,
+        imagePadding: $imagePadding.value,
         logoHref: logoHref,
         logoPos: $logoPos.value,
         logoSize: $logoSize.value,
@@ -825,7 +941,743 @@
 
   $downloadJpg.addEventListener('click', downloadAsJPG);
 
+  // Test contrast calculation function (for debugging)
+  window.testContrast = function(bg, text) {
+    const ratio = getContrastRatio(text, bg);
+    const result = ratio >= 4.5 ? '✅ PASS' : '❌ FAIL';
+    console.log(`Contrast test: ${text} on ${bg} = ${ratio.toFixed(2)} ${result}`);
+    return ratio;
+  };
+  
+  // Professional Typography Generator following design principles
+  function generateProfessionalTypography() {
+    // Define professional typography systems following the 9 rules
+    const typographySystems = [
+      // Rule 1: Serif + Sans combinations (workhorse + accent)
+      {
+        name: 'Classic Editorial',
+        fontFamily: 'Georgia, serif',
+        headerWeight: '700',   // Bold for structure  
+        subWeight: '400',      // Regular for body
+        contrast: '3.5:1',     // Strong hierarchy
+        category: 'serif-sans',
+        // Rule 4: Letter-spacing for different text types
+        headerLetterSpacing: '-0.02em',  // Tighten headlines for impact
+        subLetterSpacing: '0em'          // Default for body readability
+      },
+      {
+        name: 'Modern Editorial', 
+        fontFamily: 'Times, serif',
+        headerWeight: '800',   // Bold for titles
+        subWeight: '400',      // Regular for readability
+        contrast: '4:1',
+        category: 'serif-sans',
+        headerLetterSpacing: '-0.025em',  // Tight for serif headlines
+        subLetterSpacing: '0em'
+      },
+      
+      // Rule 1: Single family with weight contrast
+      {
+        name: 'Swiss Modern',
+        fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto',
+        headerWeight: '800',   // Extra bold for impact
+        subWeight: '400',      // Regular for body  
+        contrast: '4:1',       // Strong visual hierarchy
+        category: 'single-family',
+        headerLetterSpacing: '-0.03em',   // Aggressive tightening for impact
+        subLetterSpacing: '-0.01em'       // Slight tightening for body
+      },
+      {
+        name: 'Neo-Grotesque',
+        fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto', 
+        headerWeight: '900',   // Black for maximum impact
+        subWeight: '300',      // Light for contrast
+        contrast: '6:1',       // Dramatic hierarchy
+        category: 'single-family',
+        headerLetterSpacing: '-0.04em',   // Very tight for black weight
+        subLetterSpacing: '0.01em'        // Slightly open for light weight
+      },
+      {
+        name: 'Bauhaus Functional',
+        fontFamily: 'DM Sans, sans-serif',
+        headerWeight: '800',   
+        subWeight: '400',      
+        contrast: '4:1',
+        category: 'single-family',
+        headerLetterSpacing: '-0.025em',  // Functional tightening
+        subLetterSpacing: '0em'           // Clean, default
+      },
+      {
+        name: 'Constructivist',
+        fontFamily: 'Space Grotesk, sans-serif',
+        headerWeight: '700',
+        subWeight: '400',
+        contrast: '3.5:1', 
+        category: 'single-family',
+        headerLetterSpacing: '-0.02em',   // Moderate impact
+        subLetterSpacing: '0em'
+      },
+      {
+        name: 'Humanist Balance',
+        fontFamily: 'Plus Jakarta Sans, sans-serif',
+        headerWeight: '700',
+        subWeight: '400', 
+        contrast: '3.5:1',
+        category: 'single-family',
+        headerLetterSpacing: '-0.015em',  // Gentle tightening
+        subLetterSpacing: '0em'
+      },
+      {
+        name: 'Corporate Clean',
+        fontFamily: 'Manrope, sans-serif',
+        headerWeight: '800',
+        subWeight: '400',
+        contrast: '4:1',
+        category: 'single-family',
+        headerLetterSpacing: '-0.03em',   // Strong corporate impact
+        subLetterSpacing: '-0.005em'      // Slight tightening for precision
+      },
+      {
+        name: 'Tech Precision',
+        fontFamily: 'Outfit, sans-serif', 
+        headerWeight: '700',
+        subWeight: '400',
+        contrast: '3.5:1',
+        category: 'single-family',
+        headerLetterSpacing: '-0.02em',   // Technical precision
+        subLetterSpacing: '0em'
+      },
+      {
+        name: 'Contemporary Edge',
+        fontFamily: 'Sora, sans-serif',
+        headerWeight: '700',
+        subWeight: '400', 
+        contrast: '3.5:1',
+        category: 'single-family',
+        headerLetterSpacing: '-0.02em',   // Modern tightening
+        subLetterSpacing: '0em'
+      }
+    ];
+    
+    // Select a random professional system
+    const system = typographySystems[Math.floor(Math.random() * typographySystems.length)];
+    
+    return {
+      ...system,
+      // Add calculated contrast for validation
+      calculatedContrast: parseFloat(system.headerWeight) / parseFloat(system.subWeight)
+    };
+  }
+
+  // Professional Spacing Generator following typography rules
+  function generateProfessionalSpacing() {
+    // Professional spacing systems based on typographic rhythm
+    const spacingSystems = [
+      // Rule 5: Minimum 1x type size, Ideal 1.5x-2x for breathing
+      {
+        name: 'Bauhaus Minimal',
+        horizontal: 48,    // Increased from 32 - more generous minimum
+        vertical: 56,      // Increased from 40 - better vertical rhythm
+        rhythm: 'minimal',
+        principle: 'Generous minimal - proper breathing room'
+      },
+      {
+        name: 'Swiss Grid',
+        horizontal: 64,    // Increased from 48 - more structured space
+        vertical: 72,      // Increased from 56 - proportional vertical
+        rhythm: 'structured',
+        principle: 'Structured grid with generous spacing'
+      },
+      {
+        name: 'Editorial Classic',
+        horizontal: 72,    // Increased from 56 - more editorial feel
+        vertical: 88,      // Increased from 72 - better reading flow
+        rhythm: 'generous',
+        principle: 'Editorial spaciousness for readability'
+      },
+      {
+        name: 'Constructivist',
+        horizontal: 56,    // Increased from 40 - less tight
+        vertical: 80,      // Increased from 64 - more dramatic
+        rhythm: 'asymmetric',
+        principle: 'Asymmetric with generous margins'
+      },
+      {
+        name: 'Modernist Comfortable',
+        horizontal: 40,    // Increased from 24 - no longer tight
+        vertical: 48,      // Increased from 32 - better minimum
+        rhythm: 'comfortable',
+        principle: 'Comfortable minimum with proper space'
+      },
+      {
+        name: 'Contemporary Flow',
+        horizontal: 80,    // Increased from 64 - more spacious
+        vertical: 104,     // Increased from 88 - modern generous spacing
+        rhythm: 'flowing',
+        principle: 'Contemporary generous flow'
+      },
+      {
+        name: 'Poster Impact',
+        horizontal: 96,    // Increased from 80 - dramatic impact
+        vertical: 112,     // Increased from 96 - maximum breathing
+        rhythm: 'impactful',
+        principle: 'Poster-style dramatic spacing'
+      },
+      {
+        name: 'Grid Precision',
+        horizontal: 64,    // Increased from 48 - 4x base grid unit
+        vertical: 80,      // Increased from 64 - 5x base grid unit
+        rhythm: 'modular',
+        principle: 'Precise modular grid with generous space'
+      }
+    ];
+    
+    // Select random spacing system
+    const system = spacingSystems[Math.floor(Math.random() * spacingSystems.length)];
+    
+    return {
+      ...system,
+      // Ensure values are within reasonable bounds for the layout system
+      horizontal: Math.max(24, Math.min(120, system.horizontal)),
+      vertical: Math.max(24, Math.min(120, system.vertical))
+    };
+  }
+
+  // Manual unified color test function
+  window.testUnifiedColors = function() {
+    console.log('🧪 Testing unified color palette...');
+    
+    // Generate a test unified scheme without image
+    const testScheme = generateUnifiedColorPalette();
+    
+    // Apply all colors from the same palette
+    $bgColor.value = testScheme.background;
+    $bgHex.value = testScheme.background;
+    $textColor.value = testScheme.text;
+    $textHex.value = testScheme.text;
+    $tagShapeColor.value = testScheme.tagBackground;
+    $tagShapeHex.value = testScheme.tagBackground;
+    $tagTextColor.value = testScheme.tagText;
+    $tagTextHex.value = testScheme.tagText;
+    
+    // Trigger updates
+    [$bgColor, $textColor, $tagShapeColor, $tagTextColor].forEach(input => {
+      input.dispatchEvent(new Event('input'));
+      input.dispatchEvent(new Event('change'));
+    });
+    
+    console.log('🎯 Applied unified scheme:', testScheme);
+    
+    // Force repaint
+    setTimeout(() => {
+      if (window.paint) {
+        window.paint();
+        console.log('🎨 Forced repaint with unified colors');
+      }
+    }, 100);
+  };
+  
+  // Auto-test function that runs on page load
+  window.autoTestUnified = function() {
+    setTimeout(() => {
+      console.log('🤖 Auto-testing unified color system on page load...');
+      
+      // Test the new unified color system
+      if (window.testUnifiedColors) {
+        testUnifiedColors();
+      }
+    }, 2000);
+  };
+
+  // Color utility functions for beautiful randomization
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  function rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  function getLuminance(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    
+    const rsRGB = rgb.r / 255;
+    const gsRGB = rgb.g / 255;
+    const bsRGB = rgb.b / 255;
+    
+    const r = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
+    const g = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
+    const b = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
+    
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  function getContrastRatio(color1, color2) {
+    const lum1 = getLuminance(color1);
+    const lum2 = getLuminance(color2);
+    const brightest = Math.max(lum1, lum2);
+    const darkest = Math.min(lum1, lum2);
+    return (brightest + 0.05) / (darkest + 0.05);
+  }
+
+  function hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
+
+  // Extract dominant colors from an image
+  function extractImageColors(imageElement, callback) {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Scale down for performance
+      const maxSize = 100;
+      const ratio = Math.min(maxSize / imageElement.width, maxSize / imageElement.height);
+      canvas.width = imageElement.width * ratio;
+      canvas.height = imageElement.height * ratio;
+      
+      ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+      
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels = imageData.data;
+      const colorCounts = {};
+      
+      // Sample every 4th pixel for performance
+      for (let i = 0; i < pixels.length; i += 16) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const alpha = pixels[i + 3];
+        
+        // Skip transparent pixels
+        if (alpha < 128) continue;
+        
+        // Group similar colors by rounding to nearest 20
+        const roundedR = Math.round(r / 20) * 20;
+        const roundedG = Math.round(g / 20) * 20;
+        const roundedB = Math.round(b / 20) * 20;
+        
+        const colorKey = `${roundedR},${roundedG},${roundedB}`;
+        colorCounts[colorKey] = (colorCounts[colorKey] || 0) + 1;
+      }
+      
+      // Get top colors
+      const sortedColors = Object.entries(colorCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 8)
+        .map(([color]) => {
+          const [r, g, b] = color.split(',').map(Number);
+          return rgbToHex(r, g, b);
+        });
+      
+      callback(sortedColors);
+    } catch (error) {
+      console.log('Could not extract colors from image:', error);
+      callback([]);
+    }
+  }
+
+  // Generate palette from extracted image colors
+  function generateImageBasedPalette(imageColors) {
+    if (!imageColors || imageColors.length === 0) {
+      return null;
+    }
+    
+    // Sort colors by luminance to separate light and dark
+    const colorsByLuminance = imageColors
+      .map(color => ({ color, luminance: getLuminance(color) }))
+      .sort((a, b) => a.luminance - b.luminance);
+    
+    // Find suitable background (very light colors)
+    const lightColors = colorsByLuminance.filter(c => c.luminance > 0.8);
+    const darkColors = colorsByLuminance.filter(c => c.luminance < 0.3);
+    const midColors = colorsByLuminance.filter(c => c.luminance >= 0.3 && c.luminance <= 0.8);
+    
+    // Create palette structure with more colors for variety
+    const palette = {
+      name: 'From Image',
+      source: 'image',
+      backgrounds: lightColors.length > 0 ? lightColors.map(c => c.color) : ['#ffffff', '#f8fafc', '#f1f5f9'],
+      accents: darkColors.length > 0 ? darkColors.map(c => c.color) : ['#1a1a1a', '#374151', '#475569'],
+      vibrants: [
+        // Use all extracted colors as vibrants for maximum variety
+        ...imageColors,
+        // Add some fallbacks in case image has limited colors
+        ...(midColors.length > 0 ? midColors.map(c => c.color) : ['#3b82f6', '#8b5cf6', '#f59e0b'])
+      ].slice(0, 6) // Keep up to 6 vibrant colors
+    };
+    
+    console.log(`🖼️ Created image palette with ${palette.backgrounds.length} backgrounds, ${palette.accents.length} accents, ${palette.vibrants.length} vibrants`);
+    
+    return palette;
+  }
+
+  function generateUnifiedColorPalette(imageBasedPalette = null) {
+    // If image-based palette exists, ALWAYS use it (image colors are priority)
+    let palette;
+    
+    if (imageBasedPalette) {
+      palette = imageBasedPalette;
+      console.log('🎨 Using image-based color palette');
+    } else {
+      // Define beautiful, harmonious color palettes
+      const palettes = [
+      // Modern Neutral (high contrast, professional)
+      { 
+        name: 'Modern Neutral',
+        backgrounds: ['#ffffff', '#f8fafc', '#f1f5f9'],
+        accents: ['#0f172a', '#1e293b', '#334155'],
+        vibrants: ['#3b82f6', '#6366f1', '#8b5cf6']
+      },
+      // Warm Earth (cozy, approachable)
+      { 
+        name: 'Warm Earth',
+        backgrounds: ['#fefcfb', '#fef7f0', '#fef2f2'],
+        accents: ['#7c2d12', '#9a3412', '#a16207'],
+        vibrants: ['#ea580c', '#f59e0b', '#eab308']
+      },
+      // Cool Ocean (calm, trustworthy)
+      { 
+        name: 'Cool Ocean',
+        backgrounds: ['#f8fafc', '#f0f9ff', '#ecfeff'],
+        accents: ['#0c4a6e', '#164e63', '#155e75'],
+        vibrants: ['#0284c7', '#0891b2', '#06b6d4']
+      },
+      // Fresh Green (nature, growth)
+      { 
+        name: 'Fresh Green',
+        backgrounds: ['#f7fef7', '#f0fdf4', '#ecfdf5'],
+        accents: ['#14532d', '#166534', '#15803d'],
+        vibrants: ['#16a34a', '#22c55e', '#4ade80']
+      },
+      // Royal Purple (luxury, creative)
+      { 
+        name: 'Royal Purple',
+        backgrounds: ['#fefcfe', '#faf5ff', '#f5f3ff'],
+        accents: ['#581c87', '#6b21a8', '#7c3aed'],
+        vibrants: ['#8b5cf6', '#a855f7', '#c084fc']
+      },
+      // Sunset Orange (energetic, warm)
+      { 
+        name: 'Sunset Orange',
+        backgrounds: ['#fffbf7', '#fff7ed', '#fef2f2'],
+        accents: ['#9a3412', '#c2410c', '#dc2626'],
+        vibrants: ['#ea580c', '#f97316', '#fb923c']
+      }
+    ];
+      
+      // Choose a random palette
+      palette = palettes[Math.floor(Math.random() * palettes.length)];
+    }
+    
+    console.log(`🎯 Selected palette: ${palette.name}`);
+    
+    // Create a unified color scheme from this single palette
+    return createUnifiedScheme(palette);
+  }
+  
+  function createUnifiedScheme(palette) {
+    // Randomly select base colors from the palette  
+    const background = palette.backgrounds[Math.floor(Math.random() * palette.backgrounds.length)];
+    const textColor = palette.accents[Math.floor(Math.random() * palette.accents.length)];
+    const accent1 = palette.vibrants[Math.floor(Math.random() * palette.vibrants.length)];
+    const accent2 = palette.vibrants[Math.floor(Math.random() * palette.vibrants.length)];
+    
+    // Ensure text contrast
+    let finalTextColor = textColor;
+    if (getContrastRatio(finalTextColor, background) < 4.5) {
+      finalTextColor = getLuminance(background) > 0.5 ? '#0f172a' : '#ffffff';
+    }
+    
+    // Tag gets a different vibrant color for visual interest, but text uses background for contrast
+    let tagBackground = accent1;
+    let tagText = background;
+    
+    // Verify tag contrast and fix if needed
+    if (getContrastRatio(tagText, tagBackground) < 4.5) {
+      tagText = getLuminance(tagBackground) > 0.5 ? '#000000' : '#ffffff';
+    }
+    
+    const scheme = {
+      // Layout colors
+      background: background,
+      text: finalTextColor,
+      
+      // Tag colors (can be different from text for visual variety)
+      tagBackground: tagBackground,
+      tagText: tagText,
+      
+      // Additional accent for potential future use
+      accent: accent2,
+      
+      // Metadata
+      palette: palette.name,
+      source: palette.source || 'predefined'
+    };
+    
+    console.log(`🎨 Unified color scheme from "${palette.name}":`, {
+      bg: scheme.background,
+      text: scheme.text, 
+      tagBg: scheme.tagBackground,
+      tagText: scheme.tagText,
+      accent: scheme.accent
+    });
+    
+    return scheme;
+  }
+
+  // Randomization function
+  function randomizeLayout() {
+    console.log('🚀 RANDOMIZE BUTTON CLICKED - STARTING FULL DEBUG TRACE');
+    console.log('🔍 Step 1: Function entry confirmed');
+    
+    // Clear layout cache to ensure fresh calculations with new parameters
+    layoutCache.clear();
+    const randomOptions = {
+      patterns: ['auto', 'top', 'side', 'left'],
+      logoPositions: ['top', 'bottom'],
+      logoSizes: ['s', 'm', 'l'],
+      tagPositions: ['above', 'below'],
+      tagSizes: ['s', 'm', 'l'],
+      fontFamilies: [
+        'Inter, system-ui, -apple-system, Segoe UI, Roboto',
+        'Poppins, sans-serif',
+        'Manrope, sans-serif',
+        'Plus Jakarta Sans, sans-serif',
+        'Space Grotesk, sans-serif',
+        'DM Sans, sans-serif',
+        'Outfit, sans-serif',
+        'Sora, sans-serif'
+      ],
+      headerWeights: ['300', '400', '500', '600', '700', '800', '900'],
+      subWeights: ['300', '400', '500', '600', '700'],
+      colors: ['#1a1a1a', '#dc2626', '#ea580c', '#d97706', '#65a30d', '#059669', '#0891b2', '#0284c7', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#c026d3', '#db2777'],
+      bgColors: ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#f0fdf4', '#ecfdf5', '#f0fdfa', '#ecfeff', '#f0f9ff', '#eff6ff', '#eef2ff', '#f5f3ff', '#faf5ff', '#fdf4ff', '#fef7f7']
+    };
+
+    // Randomize pattern (image layout)
+    if (Math.random() > 0.3) { // 70% chance to randomize pattern
+      const randomPattern = randomOptions.patterns[Math.floor(Math.random() * randomOptions.patterns.length)];
+      $pattern.value = randomPattern;
+    }
+
+    // Randomize image rounded corners
+    $imageRounded.checked = Math.random() > 0.5;
+    // Randomize image padding behavior
+    $imagePadding.value = Math.random() > 0.7 ? 'fill' : 'layout'; // 30% chance for edge-fill
+
+    // Randomize logo position and size
+    if (Math.random() > 0.4) { // 60% chance to randomize logo
+      const randomLogoPos = randomOptions.logoPositions[Math.floor(Math.random() * randomOptions.logoPositions.length)];
+      const randomLogoSize = randomOptions.logoSizes[Math.floor(Math.random() * randomOptions.logoSizes.length)];
+      $logoPos.value = randomLogoPos;
+      $logoSize.value = randomLogoSize;
+    }
+
+    // Randomize tag position and size  
+    if (Math.random() > 0.4) { // 60% chance to randomize tag
+      const randomTagPos = randomOptions.tagPositions[Math.floor(Math.random() * randomOptions.tagPositions.length)];
+      const randomTagSize = randomOptions.tagSizes[Math.floor(Math.random() * randomOptions.tagSizes.length)];
+      $tagPos.value = randomTagPos;
+      $tagSize.value = randomTagSize;
+    }
+
+    // Professional Typography System
+    console.log('📝 Applying professional typography rules...');
+    const typographySystem = generateProfessionalTypography();
+    
+    // Apply font family
+    $ff.value = typographySystem.fontFamily;
+    
+    // Apply weights with proper hierarchy (3:1 minimum contrast ratio)
+    $hw.value = typographySystem.headerWeight;
+    $sw.value = typographySystem.subWeight;
+    
+    console.log(`📝 Typography applied: ${typographySystem.name}`, {
+      font: typographySystem.fontFamily,
+      headerWeight: typographySystem.headerWeight,
+      subWeight: typographySystem.subWeight,
+      headerLetterSpacing: typographySystem.headerLetterSpacing,
+      subLetterSpacing: typographySystem.subLetterSpacing,
+      contrast: typographySystem.contrast
+    });
+    
+    // Store typography for paint function to use
+    window.currentTypography = {
+      headerLetterSpacing: typographySystem.headerLetterSpacing,
+      subLetterSpacing: typographySystem.subLetterSpacing
+    };
+
+    // Professional padding based on typography rules (1.5x-2x type size for breathing)
+    console.log('📐 Applying professional spacing rules...');
+    const spacingSystem = generateProfessionalSpacing();
+    
+    $paddingH.value = spacingSystem.horizontal;
+    $paddingV.value = spacingSystem.vertical;
+    
+    console.log(`📐 Spacing applied: ${spacingSystem.name}`, {
+      horizontal: spacingSystem.horizontal,
+      vertical: spacingSystem.vertical,
+      rhythm: spacingSystem.rhythm
+    });
+
+    console.log('🔍 Step 2: Reached color randomization section');
+    // Always apply unified color palette for all elements
+    console.log('🎨 Generating unified color palette for all elements...');
+      // Try to extract colors from current image
+      const tryImageBasedColors = () => {
+        // Try multiple selectors to find the image
+        const imageElement = document.querySelector('image') || 
+                           document.querySelector('.layout-container image') ||
+                           document.querySelector('svg image');
+        
+        console.log('🔍 Step 3: Looking for image element:', imageElement);
+        
+        if (imageElement && imageElement.href && imageElement.href.baseVal) {
+          console.log('📸 Found image - image colors take priority, shuffling image-based palette');
+          // Create temporary img element to extract colors
+          const tempImg = new Image();
+          tempImg.crossOrigin = 'anonymous';
+          tempImg.onload = () => {
+            console.log('✅ Image loaded, extracting colors...');
+            extractImageColors(tempImg, (imageColors) => {
+              console.log('🎨 Extracted image colors:', imageColors);
+              const imageBasedPalette = generateImageBasedPalette(imageColors);
+              if (imageBasedPalette) {
+                console.log('🎯 Generated image-based palette:', imageBasedPalette);
+              }
+              const colorScheme = generateUnifiedColorPalette(imageBasedPalette);
+              applyColorScheme(colorScheme);
+            });
+          };
+          tempImg.onerror = (e) => {
+            console.log('❌ Failed to load image:', e);
+            // Fallback to predefined palettes
+            const colorScheme = generateUnifiedColorPalette();
+            applyColorScheme(colorScheme);
+          };
+          tempImg.src = imageElement.href.baseVal;
+        } else {
+          console.log('🔍 Step 4: No image found, generating new unified predefined palette');
+          // No image found, use predefined unified palettes
+          const colorScheme = generateUnifiedColorPalette();
+          console.log('🔍 Step 5: Generated color scheme:', colorScheme);
+          applyColorScheme(colorScheme);
+        }
+      };
+      
+      const applyColorScheme = (colorScheme) => {
+        console.log('🔍 Step 6: Entering applyColorScheme function');
+        console.log(`🎨 Applied "${colorScheme.palette}" color scheme:`, colorScheme);
+        
+        // ALWAYS apply all unified colors (no probability)
+        console.log('🔍 Step 7: Applying background color:', colorScheme.background);
+        $bgColor.value = colorScheme.background;
+        $bgHex.value = colorScheme.background;
+
+        console.log('🔍 Step 8: Applying text color:', colorScheme.text);
+        $textColor.value = colorScheme.text;
+        $textHex.value = colorScheme.text;
+
+        // Apply tag colors
+        console.log('🔍 Step 9: Checking tag text value:', $tagText.value);
+        console.log(`🔍 Tag elements exist: tagTextColor=${!!$tagTextColor}, tagShapeColor=${!!$tagShapeColor}`);
+        
+        if ($tagText.value.trim()) { // Always apply tag colors if tag exists
+          console.log(`🔍 BEFORE: tagTextColor=${$tagTextColor.value}, tagShapeColor=${$tagShapeColor.value}`);
+          console.log(`🔍 APPLYING: tagText=${colorScheme.tagText}, tagBackground=${colorScheme.tagBackground}`);
+          
+          $tagTextColor.value = colorScheme.tagText;
+          $tagTextHex.value = colorScheme.tagText;
+          $tagShapeColor.value = colorScheme.tagBackground;
+          $tagShapeHex.value = colorScheme.tagBackground;
+          
+          console.log(`🔍 Step 10: AFTER setting values: tagTextColor=${$tagTextColor.value}, tagShapeColor=${$tagShapeColor.value}`);
+          console.log(`🏷️ Tag colors set - Background: ${colorScheme.tagBackground}, Text: ${colorScheme.tagText}`);
+        } else {
+          console.log('🔍 Step 10: No tag text found, skipping tag colors');
+        }
+        
+        console.log('🔍 Step 11: Triggering all input/change events');
+        // Trigger change events to make sure the UI updates
+        [$bgColor, $textColor, $tagTextColor, $tagShapeColor].forEach((element, index) => {
+          if (element) {
+            console.log(`🔍 Triggering events for element ${index}:`, element.id);
+            element.dispatchEvent(new Event('input'));
+            element.dispatchEvent(new Event('change'));
+          }
+        });
+        
+        console.log('🔍 Step 12: Scheduling repaint');
+        // Force immediate repaint
+        setTimeout(() => {
+          if (window.paint) {
+            console.log('🔍 Step 13: Calling paint()');
+            window.paint();
+            console.log('✅ PAINT COMPLETED - unified colors should now be visible');
+          } else {
+            console.error('❌ window.paint function not found!');
+          }
+        }, 50);
+      };
+      
+    console.log('🔍 Step 14: Calling tryImageBasedColors()');
+    tryImageBasedColors();
+
+    console.log('🔍 Step 15: Setting randomization mode');
+    // Always use standard layout mode for randomization to ensure pattern selection works
+    // This allows 'left', 'side', 'top' patterns to work properly
+    isRandomMode = false;
+
+    // Apply font loading if needed
+    const selectedOption = $ff.options[$ff.selectedIndex];
+    const fontName = selectedOption ? selectedOption.textContent : 'Inter';
+    loadGoogleFont(fontName).then(() => {
+      canvasCache.clear();
+      paint();
+    }).catch(() => {
+      console.log('🔍 Step 17: Calling final paint()');
+      paint();
+    });
+    
+    console.log('🔍 Step 18: Function about to end - calling paint() to ensure update');
+    paint(); // Ensure layout always updates immediately
+    console.log('✅ RANDOMIZATION FUNCTION COMPLETED!');
+  }
+
+  // Debug: Check if button exists
+  console.log('Looking for randomizeLayout button...');
+  console.log('$randomizeLayout:', $randomizeLayout);
+  if ($randomizeLayout) {
+    console.log('Random button found, adding event listener');
+    $randomizeLayout.addEventListener('click', randomizeLayout);
+  } else {
+    console.error('Random button not found!');
+  }
+
   function paint(){
+    console.log('🖌️ PAINT FUNCTION CALLED');
+    // Clear layout cache to ensure new padding rules are applied
+    layoutCache.clear();
+    console.log('🔍 Current color values at paint time:');
+    console.log('  - Background:', $bgColor.value, '/', $bgHex.value);
+    console.log('  - Text:', $textColor.value, '/', $textHex.value);  
+    console.log('  - Tag shape:', $tagShapeColor.value, '/', $tagShapeHex.value);
+    console.log('  - Tag text:', $tagTextColor.value, '/', $tagTextHex.value);
+    
     try{
       $err.textContent='';
       
@@ -837,7 +1689,9 @@
       
       const width = Math.max(320, parseInt($w.value||'1200',10));
       const height= Math.max(320, parseInt($h.value||'675',10));
-      const {svg, meta} = renderSVG({
+      console.log('🎨 paint() called with:', { imageHref: imageHref ? 'HAS_IMAGE' : 'NO_IMAGE', patternChoice: $pattern.value });
+      console.log('🔍 Colors being passed to renderSVG:');
+      const renderParams = {
         width, height,
         header: $header.value,
         subheader: $sub.value,
@@ -847,6 +1701,7 @@
         imageHref: imageHref,
         patternChoice: $pattern.value,
         imageRounded: $imageRounded.checked,
+        imagePadding: $imagePadding.value,
         logoHref: logoHref,
         logoPos: $logoPos.value,
         logoSize: $logoSize.value,
@@ -858,8 +1713,18 @@
         textColor: $textHex.value,
         bgColor: $bgHex.value,
         paddingH: parseInt($paddingH.value||'24',10),
-        paddingV: parseInt($paddingV.value||'24',10)
-      });
+        paddingV: parseInt($paddingV.value||'24',10),
+        // Add typography parameters from randomization
+        headerLetterSpacing: window.currentTypography?.headerLetterSpacing || '0',
+        subLetterSpacing: window.currentTypography?.subLetterSpacing || '0'
+      };
+      
+      console.log('  - tagTextColor:', renderParams.tagTextColor);
+      console.log('  - tagShapeColor:', renderParams.tagShapeColor);
+      console.log('  - textColor:', renderParams.textColor);
+      console.log('  - bgColor:', renderParams.bgColor);
+      
+      const {svg, meta} = renderSVG(renderParams);
 
       // Store current layout
       currentSvg = svg;
@@ -869,7 +1734,7 @@
       $wrap.innerHTML = svg;
       $wrap.style.width = width + 'px';
       $wrap.style.height = height + 'px';
-      $wrap.className = $imageRounded.checked ? 'rounded' : '';
+      $wrap.className = ''; // Remove rounded class from container
       
       updateScale(width, height);
     }catch(e){ 
@@ -900,7 +1765,7 @@
   
   // Text inputs get debounced updates for typing, others get immediate
   [$header, $sub, $tagText].forEach(n => n.addEventListener('input', debouncedPaint));
-  [$w,$h,$hw,$sw,$ff,$pattern,$imageRounded,$logoPos,$logoSize,$tagPos,$tagSize,$tagTextColor,$tagTextHex,$tagShapeColor,$tagShapeHex,$paddingH,$paddingV,$bgColor,$bgHex,$textColor,$textHex,$sizePreset].forEach(n => n.addEventListener('change', paint));
+  [$w,$h,$hw,$sw,$ff,$pattern,$imageRounded,$imagePadding,$logoPos,$logoSize,$tagPos,$tagSize,$tagTextColor,$tagTextHex,$tagShapeColor,$tagShapeHex,$paddingH,$paddingV,$bgColor,$bgHex,$textColor,$textHex,$sizePreset].forEach(n => n.addEventListener('change', paint));
   
   // Add special handling for width/height to update preset selector and validate bounds
   function validateDimensionInput(input, dimension) {
@@ -1120,5 +1985,32 @@
 
   $generateAI.addEventListener('click', generateWithAI);
 
+  // Removed duplicate simple randomizeLayout function - using comprehensive version above
+
+  // Random Layout Button Event Listener
+  console.log('Looking for randomizeLayout button...');
+  console.log('$randomizeLayout:', $randomizeLayout);
+  if ($randomizeLayout) {
+    console.log('Random button found, adding event listener');
+    $randomizeLayout.addEventListener('click', randomizeLayout);
+  } else {
+    console.error('Random button not found!');
+  }
+
+  // Expose functions globally for external access
+  window.paint = paint;
+  
+  // FORCE override of any existing randomizeLayout function
+  console.log('🔧 Setting up unified randomizeLayout function (overriding any existing)');
+  window.randomizeLayout = randomizeLayout;
+  
+  // Auto-run test to verify unified colors work on page load
+  setTimeout(() => {
+    console.log('🤖 Auto-testing unified color system...');
+    if (window.autoTestUnified) {
+      window.autoTestUnified();
+    }
+  }, 3000);
+  
   paint();
 })();
